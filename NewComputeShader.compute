@@ -38,7 +38,11 @@ void Airflow (uint3 id : SV_DispatchThreadID)
 	const int size = 1024;
 	// R is vel_x, green is vel_y, and blue is pressure
 
-	const float k = 0.125;
+	const float k_pv = 0.125;
+	const float k_sm = 0.125;
+	const float k_tk = 0.0;
+	
+	
 	float dp = 0.0;
 	float dx = 0.0;
 	float dy = 0.0;
@@ -49,25 +53,26 @@ void Airflow (uint3 id : SV_DispatchThreadID)
 	float4 air_above = airflow_input[ float2(id.x, id.y+1)];
 	float4 air_l     = airflow_input[ float2(id.x-1, id.y)];
 	float4 air_r     = airflow_input[ float2(id.x+1, id.y)];
-	dp += (air_l.r     - air_here.r ) * k;
-	dp += (air_here.r  - air_r.r    ) * k;
-	dp += (air_below.g - air_here.g ) * k;
-	dp += (air_here.g  - air_above.g) * k;
-	dx += (air_l.b     - air_here.b ) * k;
-	dx += (air_here.b  - air_r.b    ) * k;
-	dy += (air_below.b - air_here.b ) * k;
-	dy += (air_here.b  - air_above.b) * k;
+	
+	dp += (air_here.r  - air_l.r    ) * k_pv;
+	dp += (air_here.r  - air_r.r    ) * k_pv * -1;
+	dp += (air_here.g -  air_below.g) * k_pv * -1;
+	dp += (air_here.g  - air_above.g) * k_pv ;
+	dx += (air_here.b  - air_l.b    ) * k_pv ;
+	dx += (air_here.b  - air_r.b    ) * k_pv * -1;
+	dy += (air_here.b  - air_below.b) * k_pv * -1;
+	dy += (air_here.b  - air_above.b) * k_pv;
 	
 	// smoothing
 	float4 avg = (air_here + air_below + air_above + air_l + air_r) / 5;
-	dx += (avg.r - air_here.r) * k;
-	dy += (avg.g - air_here.g) * k;
-	dp += (avg.b - air_here.b) * k;
+	dx += (avg.r - air_here.r) * k_sm;
+	dy += (avg.g - air_here.g) * k_sm;
+	dp += (avg.b - air_here.b) * k_sm;
 	
 	// take
 	float2 take_from_pos = float2(id.x + (air_here.r / 2), id.y + (air_here.g / 2) );
-	dx -= ( air_here.r - airflow_input[take_from_pos].r     ) * k;
-	dy -= ( air_here.g - airflow_input[take_from_pos].g     ) * k;
+	dx -= ( air_here.r - airflow_input[take_from_pos].r     ) * k_tk;
+	dy -= ( air_here.g - airflow_input[take_from_pos].g     ) * k_tk;
 	
 	
 	airflow_output[id.xy] = float4(  airflow_input[id.xy].r + dx,  airflow_input[id.xy].g + dy, airflow_input[id.xy].b + dp, 1.0  );

@@ -80,6 +80,18 @@ public class deepseaunity3 : MonoBehaviour
 
     Texture2D moocow_brown ;
 
+
+
+
+    public Texture2D tex_white_square;
+    public Sprite sprite_white_square;
+    public GameObject mouse_go;
+    public Image mouse_indicator;
+
+
+
+
+
     void ToTexture2D( RenderTexture rTex, Texture2D tex)
     {
         RenderTexture.active = rTex;
@@ -94,6 +106,15 @@ public class deepseaunity3 : MonoBehaviour
         this.go = new GameObject();
         this.canvas = this.go.AddComponent<Canvas>();
         this.canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+        this.tex_white_square = new Texture2D(64, 64);
+        this.sprite_white_square = Sprite.Create(tex_white_square, new Rect(0.0f, 0.0f, this.tex_white_square.width, this.tex_white_square.height), new Vector2(0.5f, 0.5f), 100.0f);
+        this.mouse_go = new GameObject();
+        this.mouse_go.transform.SetParent(this.canvas.transform);
+        this.mouse_indicator = this.mouse_go.AddComponent<Image>();
+        this.mouse_indicator.sprite = this.sprite_white_square;
+        this.mouse_indicator.transform.localScale  = new Vector3(1.0f, 0.1f, 1.0f);
+
 
         Segment moo = new Segment();
         Segment moot = new Segment();
@@ -120,14 +141,28 @@ public class deepseaunity3 : MonoBehaviour
         {
             for(int j = 0; j < g_size; j++)
             {
-                if (UnityEngine.Random.value > 0.9f)
-                {
-                    initial_conditions.SetPixel(i, j, new Color(10.0f, 0.0f, 0.0f, 1.0f));
-                }
-                else
-                {
-                    initial_conditions.SetPixel(i, j, new Color(0.0f, 0.0f, 0.0f, 1.0f));
-                }
+              
+                    initial_conditions.SetPixel(i, j, new Color(0.5f, 0.5f, 0.5f, 1.0f));
+                
+
+
+
+
+
+                    if (i > 300 && i < 400)
+                    {
+
+
+                        if (j > 300 && j < 400)
+                        {
+
+                            initial_conditions.SetPixel(i, j, new Color(0.5f, 0.5f, 100000.0f, 1.0f));
+                        }
+                    }
+
+
+
+
             }
         }
         initial_conditions.Apply();
