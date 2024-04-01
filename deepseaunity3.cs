@@ -48,11 +48,11 @@ public class TemplateComputeShaderRunner
     {
      _computeShader.SetFloat("_Resolution", _renderTextureOutput.width);
 
-        var main = _computeShader.FindKernel("CSMain");
+        var main = _computeShader.FindKernel("Airflow");
 
-        _computeShader.SetFloat( "randomness", UnityEngine.Random.value);
-        _computeShader.SetTexture(main, "ResultInput", input);
-        _computeShader.SetTexture(main, "ResultOutput", _renderTextureOutput);
+        _computeShader.SetFloat( "airflow_rand", UnityEngine.Random.value);
+        _computeShader.SetTexture(main, "airflow_input", input);
+        _computeShader.SetTexture(main, "airflow_output", _renderTextureOutput);
 
         _computeShader.GetKernelThreadGroupSizes(main, out uint xGroupSize, out uint yGroupSize, out uint zGroupSize);
         _computeShader.Dispatch(main, _renderTextureOutput.width / (int) xGroupSize, _renderTextureOutput.height / (int) yGroupSize,
@@ -105,8 +105,8 @@ public class deepseaunity3 : MonoBehaviour
         this.bdg= new GameObject();
         this.bdg.transform.SetParent(this.canvas.transform);
 
-        this.bdg.transform.position = new Vector3 (   500.0f, 200.0f, 0.0f   ) ;  
-        this.bdg.transform.localScale = new Vector3(4.0f, 4.0f, 1.0f);
+        this.bdg.transform.position = new Vector3 (   500.0f, 400.0f, 0.0f   ) ;  
+        this.bdg.transform.localScale = new Vector3(10.0f, 8.0f, 1.0f);
 
         this.bdi = this.bdg.AddComponent<Image>();
         
@@ -120,9 +120,9 @@ public class deepseaunity3 : MonoBehaviour
         {
             for(int j = 0; j < g_size; j++)
             {
-                if (UnityEngine.Random.value > 0.5f)
+                if (UnityEngine.Random.value > 0.9f)
                 {
-                    initial_conditions.SetPixel(i, j, new Color(1.0f, 0.0f, 0.0f, 1.0f));
+                    initial_conditions.SetPixel(i, j, new Color(10.0f, 0.0f, 0.0f, 1.0f));
                 }
                 else
                 {

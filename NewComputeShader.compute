@@ -1,15 +1,15 @@
 
-#pragma kernel CSMain
+#pragma kernel FallingSand
 
-float randomness;
+float falling_rand;
 Texture2D<float4> ResultInput;
 RWTexture2D<float4> ResultOutput;
 
 [numthreads(8,8,1)]
 
-void CSMain (uint3 id : SV_DispatchThreadID)
+void FallingSand (uint3 id : SV_DispatchThreadID)
 {
-	float2 below = float2(id.x  + (randomness * 5) - 2  , id.y  -1   );
+	float2 below = float2(id.x  + (falling_rand * 5) - 2  , id.y  -1   );
 	if (ResultInput[id.xy].r > 0.5)
 	{
 		if (ResultInput[below].r < 0.5 && id.y > 5 && id.x > 5 && id.x < 1024-5)
@@ -25,4 +25,50 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
 
 
+#pragma kernel Airflow
 
+float airflow_rand;
+Texture2D<float4> airflow_input;
+RWTexture2D<float4> airflow_output	;
+
+[numthreads(8,8,1)]
+
+void Airflow (uint3 id : SV_DispatchThreadID)
+{
+	const int size = 1024;
+	// R is vel_x, green is vel_y, and blue is pressure
+
+	const float k = 0.125;
+	float dp = 0.0;
+	float dx = 0.0;
+	float dy = 0.0;
+	
+	// pv interchange
+	float4 air_here  = airflow_input[id.xy];
+	float4 air_below = airflow_input[ float2(id.x, id.y-1)];
+	float4 air_above = airflow_input[ float2(id.x, id.y+1)];
+	float4 air_l     = airflow_input[ float2(id.x-1, id.y)];
+	float4 air_r     = airflow_input[ float2(id.x+1, id.y)];
+	dp += (air_l.r     - air_here.r ) * k;
+	dp += (air_here.r  - air_r.r    ) * k;
+	dp += (air_below.g - air_here.g ) * k;
+	dp += (air_here.g  - air_above.g) * k;
+	dx += (air_l.b     - air_here.b ) * k;
+	dx += (air_here.b  - air_r.b    ) * k;
+	dy += (air_below.b - air_here.b ) * k;
+	dy += (air_here.b  - air_above.b) * k;
+	
+	// smoothing
+	float4 avg = (air_here + air_below + air_above + air_l + air_r) / 5;
+	dx += (avg.r - air_here.r) * k;
+	dy += (avg.g - air_here.g) * k;
+	dp += (avg.b - air_here.b) * k;
+	
+	// take
+	float2 take_from_pos = float2(id.x + (air_here.r / 2), id.y + (air_here.g / 2) );
+	dx -= ( air_here.r - airflow_input[take_from_pos].r     ) * k;
+	dy -= ( air_here.g - airflow_input[take_from_pos].g     ) * k;
+	
+	
+	airflow_output[id.xy] = float4(  airflow_input[id.xy].r + dx,  airflow_input[id.xy].g + dy, airflow_input[id.xy].b + dp, 1.0  );
+}
