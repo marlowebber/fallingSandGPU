@@ -40,7 +40,8 @@ void Airflow (uint3 id : SV_DispatchThreadID)
 
 	const float k_pv = 0.125;
 	const float k_sm = 0.125;
-	const float k_tk = 0.0;
+	const float k_tkv = 1.0;
+	const float k_tkd = 1.0;
 	
 	
 	float dp = 0.0;
@@ -54,14 +55,14 @@ void Airflow (uint3 id : SV_DispatchThreadID)
 	float4 air_l     = airflow_input[ float2(id.x-1, id.y)];
 	float4 air_r     = airflow_input[ float2(id.x+1, id.y)];
 	
-	dp += (air_here.r  - air_l.r    ) * k_pv;
-	dp += (air_here.r  - air_r.r    ) * k_pv * -1;
-	dp += (air_here.g -  air_below.g) * k_pv * -1;
-	dp += (air_here.g  - air_above.g) * k_pv ;
-	dx += (air_here.b  - air_l.b    ) * k_pv ;
-	dx += (air_here.b  - air_r.b    ) * k_pv * -1;
-	dy += (air_here.b  - air_below.b) * k_pv * -1;
-	dy += (air_here.b  - air_above.b) * k_pv;
+	dp -= (air_here.r  - air_l.r    ) * k_pv;
+	dp -= (air_here.r  - air_r.r    ) * k_pv * -1;
+	dp -= (air_here.g -  air_below.g) * k_pv * -1;
+	dp -= (air_here.g  - air_above.g) * k_pv ;
+	dx -= (air_here.b  - air_l.b    ) * k_pv ;
+	dx -= (air_here.b  - air_r.b    ) * k_pv * -1;
+	dy -= (air_here.b  - air_below.b) * k_pv * -1;
+	dy -= (air_here.b  - air_above.b) * k_pv;
 	
 	// smoothing
 	float4 avg = (air_here + air_below + air_above + air_l + air_r) / 5;
@@ -70,10 +71,128 @@ void Airflow (uint3 id : SV_DispatchThreadID)
 	dp += (avg.b - air_here.b) * k_sm;
 	
 	// take
-	float2 take_from_pos = float2(id.x + (air_here.r / 2), id.y + (air_here.g / 2) );
-	dx -= ( air_here.r - airflow_input[take_from_pos].r     ) * k_tk;
-	dy -= ( air_here.g - airflow_input[take_from_pos].g     ) * k_tk;
+	float2 take_from_pos = float2(id.x + (air_here.r  * k_tkd), id.y + (air_here.g * k_tkd) );
+	dx -= ( air_here.r - airflow_input[take_from_pos].r     ) * k_tkv;
+	dy -= ( air_here.g - airflow_input[take_from_pos].g     ) * k_tkv;
 	
 	
 	airflow_output[id.xy] = float4(  airflow_input[id.xy].r + dx,  airflow_input[id.xy].g + dy, airflow_input[id.xy].b + dp, 1.0  );
+	
+	if (id.x < 5  || id.x > size - 5 || id.y < 5 || id.y > size- 5)
+	{
+		airflow_output[id.xy] = float4( 0.5,  0.5, 0.5, 1.0  );
+	}
 }
+
+
+
+
+
+
+
+
+# pragma kernel NeuralNet
+
+float nn_rand;
+
+Texture2D<float4> nn_1;
+Texture2D<float4> nn_2;
+Texture2D<float4> nn_3;
+Texture2D<float4> nn_4;
+Texture2D<float4> nn_5;
+
+RWTexture2D<float4> nn_out;
+
+[numthreads(8,8,1)]
+
+
+
+void NeuralNet (uint3 id : SV_DispatchThreadID)
+{
+
+const int connections_per_neuron = 9;
+const int neurons_per_animal = 64;
+int this_animal_index = id.xy % neurons_per_animal;
+
+/*
+
+
+the network is made of 5 textures using their RGBA channels to store data.
+
+each pixel represents 1 neuron.
+
+connection address is from 0 to neurons_per_animal.
+
+1.
+R: current value
+G: bias
+B: connection address 1
+A: connection weight 1
+
+2.
+R: connection address 2
+G: connection weight 2
+B: connection address 3
+A: connection weight 3
+
+3.
+R: connection address 4
+G: connection weight 4
+B: connection address 5
+A: connection weight 5
+
+4.
+R: connection address 6
+G: connection weight 6
+B: connection address 7
+A: connection weight 7
+
+5.
+R: connection address 8
+G: connection weight 8
+B: nothing
+A: nothing
+
+6.
+output texture with updated values which replaces texture 1 next round.
+
+
+*/
+
+float bias = 		nn_1[id.xy].g;
+float new_value = 	bias;
+
+int addr1 = this_animal_index + nn_1[id.xy].b;
+float weight1 = nn_1[id.xy].a;
+new_value += nn_1[addr1].r * weight1;
+
+int addr2 = this_animal_index + nn_2[id.xy].r;
+new_value += nn_1[addr2].r * nn_2[id.xy].g;
+
+int addr3 = this_animal_index + nn_2[id.xy].b;
+new_value += nn_1[addr3].r * nn_2[id.xy].a;
+
+int addr4 = this_animal_index + nn_3[id.xy].r;
+new_value += nn_1[addr4].r * nn_3[id.xy].g;
+
+int addr5 = this_animal_index + nn_3[id.xy].b;
+new_value += nn_1[addr5].r * nn_1[id.xy].a;
+
+int addr6 = this_animal_index + nn_4[id.xy].r;
+new_value += nn_1[addr6].r * nn_1[id.xy].g;
+
+int addr7 = this_animal_index + nn_4[id.xy].b;
+new_value += nn_1[addr7].r * nn_1[id.xy].a;
+
+int addr8 = this_animal_index + nn_5[id.xy].r;
+new_value += nn_1[addr8].r * nn_1[id.xy].g;
+
+nn_out[id.xy] = float4( new_value, bias,  addr1, weight1 );
+
+
+
+
+
+}
+
+

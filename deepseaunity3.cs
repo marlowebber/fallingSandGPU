@@ -156,7 +156,7 @@ public class deepseaunity3 : MonoBehaviour
                         if (j > 300 && j < 400)
                         {
 
-                            initial_conditions.SetPixel(i, j, new Color(0.5f, 0.5f, 100000.0f, 1.0f));
+                            initial_conditions.SetPixel(i, j, new Color(0.5f, 0.5f, 1000000.0f, 1.0f));
                         }
                     }
 
