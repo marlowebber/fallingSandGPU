@@ -10,7 +10,7 @@ using UnityEngine.Profiling;
 using TMPro;
 
 
-class Segment
+public class Segment
 {
     public Texture2D tex;
     public Sprite sprite;
@@ -20,6 +20,11 @@ class Segment
 
     public HingeJoint2D joint;
     public int connectedTo;
+
+    public BoxCollider2D col;
+
+
+    float sensation;
 
 
     public Segment(Vector2 pos)
@@ -33,41 +38,58 @@ class Segment
         this.rb = this.go.AddComponent<Rigidbody2D>();
         this.rb.gravityScale = 0.0f;
 
+        this.sensation = 0.0f;
+
+
+        this.connectedTo = UnityEngine.Random.Range(0,Content.segments_per_animal);
+
+        this.col = this.go.AddComponent<BoxCollider2D>();
+        this.col.isTrigger = true;
+        this.go.transform.localScale = new Vector3( UnityEngine.Random.value * Content.default_segment_size, UnityEngine.Random.value * Content.default_segment_size, this.go.transform.localScale.z);
+
+
+
+
         this.joint = this.go.AddComponent<HingeJoint2D>();
 
-        this.connectedTo = UnityEngine.Random.Range(0,8);
-
-        this.go.transform.localScale = new Vector3( 1.0f , 1.0f, this.go.transform.localScale.z);
-
         this.go.transform.position = pos;//new Vector3(0.0f, 0.0f, 0.0f);
+
+        
     }
 }
 
 
 
 
-class Animal
+public class Animal
 {
-    public Segment [] segments = new Segment [8];
+    public Segment [] segments = new Segment [Content.segments_per_animal];
     public int index;
 
 
     void update_segment_joints()
     {
 
-        for(int i = 0; i<8;i++)
+        for(int i = 0; i< Content.segments_per_animal;i++)
         {
             
             JointMotor2D jmo = new JointMotor2D();
             jmo.maxMotorTorque = 1000.0f;
-            jmo.motorSpeed = 0.0f;
+            jmo.motorSpeed = 0.1f;
+
+
+        
+
 
             this.segments[i].joint.enableCollision = false;
             this.segments[i].joint.breakForce = Mathf.Infinity;
             this.segments[i].joint.autoConfigureConnectedAnchor = false;
-            this.segments[i].joint.connectedBody = this.segments[segments[i].connectedTo].rb;
+
+            int connectedTo = segments[i].connectedTo;
+
+            this.segments[i].joint.connectedBody = this.segments[connectedTo].rb;
             this.segments[i].joint.anchor = new Vector2(0.0f, (this.segments[i].go.transform.localScale.x/2 ));
-            this.segments[i].joint.connectedAnchor = new Vector2(0.0f, -(this.segments[segments[i].connectedTo].go.transform.localScale.x/2));
+            this.segments[i].joint.connectedAnchor = new Vector2(0.0f, -(this.segments[connectedTo].go.transform.localScale.x/2));
             this.segments[i].joint.useMotor = true;
             this.segments[i].joint.motor = jmo;
             this.segments[i].joint.useLimits = false;
@@ -81,11 +103,20 @@ class Animal
     public Animal(int new_index)
     {
         this.index = new_index;
-        for(int i = 0; i<8;i++)
+        for(int i = 0; i<Content.segments_per_animal;i++)
         {
             this.segments[i] = new Segment(new Vector2((float)i, 0.0f));
         }
         update_segment_joints();
+
+
+        Vector3 pos = new Vector3( (UnityEngine.Random.value * Content.arena_size) - (0.5f * Content.arena_size)  ,  (UnityEngine.Random.value * Content.arena_size) - (0.5f * Content.arena_size) , 0.0f);
+
+
+        for(int i = 0; i<Content.segments_per_animal;i++)
+        {
+            this.segments[i].go.transform.position =  pos;
+        }
     }
 
 
@@ -94,30 +125,34 @@ class Animal
 
 
 
-public class TemplateComputeShaderRunner
-{
-    public RenderTexture _renderTextureOutput;
-    public TemplateComputeShaderRunner(int _size)
-    {
-        _renderTextureOutput = new RenderTexture(_size, _size, 24);
-        _renderTextureOutput.filterMode = FilterMode.Point;
-        _renderTextureOutput.enableRandomWrite = true;
-        _renderTextureOutput.Create();
-    }
+// public class TemplateComputeShaderRunner
+// // {
+//     public RenderTexture _renderTextureOutput;
+    // public TemplateComputeShaderRunner(int _size)
+    // {
+    //     _renderTextureOutput = new RenderTexture(_size, _size, 24);
+    //     _renderTextureOutput.filterMode = FilterMode.Point;
+    //     _renderTextureOutput.enableRandomWrite = true;
+    //     _renderTextureOutput.Create();
+    // }
 
-    public void run(ComputeShader _computeShader, List<Texture2D> inputs)
-    {
-     _computeShader.SetFloat("_Resolution", _renderTextureOutput.width);
+    // public void run(ComputeShader _computeShader, List<Texture2D> inputs)
+    // {
+    //  _computeShader.SetFloat("_Resolution", _renderTextureOutput.width);
 
-        var main = _computeShader.FindKernel("Airflow");
+    //     var main = _computeShader.FindKernel("NeuralNet");
 
-        _computeShader.SetFloat( "airflow_rand", UnityEngine.Random.value);
-        _computeShader.SetTexture(main, "airflow_input", inputs[0]);
-        _computeShader.SetTexture(main, "airflow_output", _renderTextureOutput);
+    //     _computeShader.SetFloat( "nn_rand", UnityEngine.Random.value);
+    //     _computeShader.SetTexture(main, "nn_1", inputs[0]);
+    //     _computeShader.SetTexture(main, "nn_2", inputs[1]);
+    //     _computeShader.SetTexture(main, "nn_3", inputs[2]);
+    //     _computeShader.SetTexture(main, "nn_4", inputs[3]);
+    //     _computeShader.SetTexture(main, "nn_5", inputs[4]);
+    //     _computeShader.SetTexture(main, "nn_out", _renderTextureOutput);
 
-        _computeShader.GetKernelThreadGroupSizes(main, out uint xGroupSize, out uint yGroupSize, out uint zGroupSize);
-        _computeShader.Dispatch(main, _renderTextureOutput.width / (int) xGroupSize, _renderTextureOutput.height / (int) yGroupSize,
-            1);
+    //     _computeShader.GetKernelThreadGroupSizes(main, out uint xGroupSize, out uint yGroupSize, out uint zGroupSize);
+    //     _computeShader.Dispatch(main, _renderTextureOutput.width / (int) xGroupSize, _renderTextureOutput.height / (int) yGroupSize,
+    //         1);
 
 
             /*
@@ -177,20 +212,33 @@ output texture with updated values which replaces texture 1 next round.
 */
 
 
-    }
+    // }
 
-    public void render(RenderTexture src, RenderTexture dest)
-    {
-        Graphics.Blit(_renderTextureOutput, dest);
-    }
+    // public void render(RenderTexture src, RenderTexture dest)
+    // {
+    //     Graphics.Blit(_renderTextureOutput, dest);
+    // }
+// }
+
+public static class Content
+{
+    public static int neurons_per_animal = 64;
+    public static int segments_per_animal = 8;
+    public static int n_animals = 256;
+    public static float default_segment_size = 2.0f;
+    public static float arena_size = 100;
 }
 
 
 public class deepseaunity3 : MonoBehaviour
 {
 
-    public ComputeShader shader;
-    public TemplateComputeShaderRunner csr;
+
+
+    public RenderTexture _renderTextureOutput;
+
+    public ComputeShader _computeShader;
+    // public TemplateComputeShaderRunner csr;
     public Canvas canvas;
     public GameObject go;
 
@@ -198,9 +246,13 @@ public class deepseaunity3 : MonoBehaviour
     public Image bdi;
     public GameObject bdg;
 
-    Texture2D moocow_brown ;
+    public Texture2D cstex_1 ;
+    public Texture2D cstex_2 ;
+    public Texture2D cstex_3 ;
+    public Texture2D cstex_4 ;
+    public Texture2D cstex_5 ;
 
-
+    public List<Texture2D> textures;
 
 
     public Texture2D tex_white_square;
@@ -209,7 +261,9 @@ public class deepseaunity3 : MonoBehaviour
     public Image mouse_indicator;
 
 
+    public int g_size;
 
+    public List<Animal> animals;
 
 
     void ToTexture2D( RenderTexture rTex, Texture2D tex)
@@ -226,66 +280,136 @@ public class deepseaunity3 : MonoBehaviour
         // Segment moo = new Segment();
         // Segment moot = new Segment();
         // moot.go.transform.position = new Vector3 (   moot.go.transform.position.x + 5, moot.go.transform.position.y, 0.0f   ) ; 
+        this.animals = new List<Animal>();
 
-        Animal shamoo = new Animal(0); 
+        for (int i = 0; i < Content.n_animals; i++)
+        {
+
+            Animal shamoo = new Animal(i); 
+            this.animals.Add(shamoo);
+        }
+
+
     }
 
 
     void setup_gpu_stuff()
-    {
-   int g_size = 1024;
-        this.csr = new TemplateComputeShaderRunner(g_size);
+     {
+         int total_size = Content.n_animals * Content.neurons_per_animal;
+         int square_size = (int)(Mathf.Sqrt(total_size));
+         this. g_size  = (int)(Mathf.Pow(2, Mathf.Ceil(Mathf.Log(square_size)/Mathf.Log(2)))); // https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
+        // this.csr = new TemplateComputeShaderRunner(g_size);
+
+        _renderTextureOutput = new RenderTexture(g_size, g_size, 24);
+        _renderTextureOutput.filterMode = FilterMode.Point;
+        _renderTextureOutput.enableRandomWrite = true;
+        _renderTextureOutput.Create();
+
 
         this.bdg= new GameObject();
         this.bdg.transform.SetParent(this.canvas.transform);
 
         this.bdg.transform.position = new Vector3 (   500.0f, 400.0f, 0.0f   ) ;  
-        this.bdg.transform.localScale = new Vector3(4.0f, 4.0f, 1.0f);
+        this.bdg.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
 
         this.bdi = this.bdg.AddComponent<Image>();
         
-        this. moocow_brown = new Texture2D(g_size, g_size);
+        // this. moocow_brown = new Texture2D(g_size, g_size);
 
-        this.bds = Sprite.Create(moocow_brown, new Rect(0.0f, 0.0f, g_size, g_size), new Vector2(g_size/2, g_size/2), 1.0f);
+
+        this. cstex_1 = new Texture2D(g_size, g_size);
+        this. cstex_2 = new Texture2D(g_size, g_size);
+        this. cstex_3 = new Texture2D(g_size, g_size);
+        this. cstex_4 = new Texture2D(g_size, g_size);
+        this. cstex_5 = new Texture2D(g_size, g_size);
+
+        this.bds = Sprite.Create(cstex_1, new Rect(0.0f, 0.0f, g_size, g_size), new Vector2(g_size/2, g_size/2), 1.0f);
         this.bdi.sprite = this.bds;
 
-        Texture2D initial_conditions = new Texture2D(g_size, g_size);
-        for(int i = 0; i < g_size; i++)
+
+
+        for(int i = 0; i < this.g_size; i++)
         {
-            for(int j = 0; j < g_size; j++)
+            for(int j = 0; j < this.g_size; j++)
             {
               
-                    initial_conditions.SetPixel(i, j, new Color(0.5f, 0.5f, 0.5f, 1.0f));
+                    // initial_conditions.SetPixel(i, j, new Color(0.5f, 0.5f, 0.5f, 1.0f));
+                    // initial_conditions.SetPixel(i, j, new Color(0.0f, 0.0f, 0.0f, 1.0f));
                 
 
 
 
 
+                    // for airflow.
+                    // if (i > 300 && i < 400)
+                    // {
+                    //     if (j > 300 && j < 400)
+                    //     {
+                    //         initial_conditions.SetPixel(i, j, new Color(0.5f, 0.5f, 1000000.0f, 1.0f));
+                    //     }
+                    // }
 
-                    if (i > 300 && i < 400)
-                    {
+
+/*
 
 
-                        if (j > 300 && j < 400)
-                        {
+1.
+R: current value
+G: bias
+B: connection address 1
+A: connection weight 1
 
-                            initial_conditions.SetPixel(i, j, new Color(0.5f, 0.5f, 1000000.0f, 1.0f));
-                        }
-                    }
+2.
+R: connection address 2
+G: connection weight 2
+B: connection address 3
+A: connection weight 3
 
+3.
+R: connection address 4
+G: connection weight 4
+B: connection address 5
+A: connection weight 5
+
+4.
+R: connection address 6
+G: connection weight 6
+B: connection address 7
+A: connection weight 7
+
+5.
+R: connection address 8
+G: connection weight 8
+B: nothing
+A: nothing
+
+6.
+output texture with updated values which replaces texture 1 next round.
+*/
+
+                    cstex_1.SetPixel(i, j, new Color(UnityEngine.Random.value, UnityEngine.Random.value, UnityEngine.Random.Range(0,8), (UnityEngine.Random.value - 0.5f) * 20.0f));
+                    cstex_2.SetPixel(i, j, new Color(UnityEngine.Random.Range(0,Content.neurons_per_animal), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,Content.neurons_per_animal), (UnityEngine.Random.value - 0.5f) * 20.0f));
+                    cstex_3.SetPixel(i, j, new Color(UnityEngine.Random.Range(0,Content.neurons_per_animal), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,Content.neurons_per_animal), (UnityEngine.Random.value - 0.5f) * 20.0f));
+                    cstex_4.SetPixel(i, j, new Color(UnityEngine.Random.Range(0,Content.neurons_per_animal), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,Content.neurons_per_animal), (UnityEngine.Random.value - 0.5f) * 20.0f));
+                    cstex_5.SetPixel(i, j, new Color(UnityEngine.Random.Range(0,Content.neurons_per_animal), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,Content.neurons_per_animal), (UnityEngine.Random.value - 0.5f) * 20.0f));
 
 
 
             }
         }
-        initial_conditions.Apply();
-        Graphics.Blit(   initial_conditions , this.csr._renderTextureOutput);
-        ToTexture2D( this.csr._renderTextureOutput, moocow_brown);
+        cstex_1.Apply();
+        cstex_2.Apply();
+        cstex_3.Apply();
+        cstex_4.Apply();
+        cstex_5.Apply();
+
     }
      
     // Start is called before the first frame update
     void Start()
     {
+
+        this.textures = new List<Texture2D> { this.cstex_1,this.cstex_2,this.cstex_3,this.cstex_4,this.cstex_5  } ;
 
         this.go = new GameObject();
         this.canvas = this.go.AddComponent<Canvas>();
@@ -309,7 +433,58 @@ public class deepseaunity3 : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        this.csr.run(shader, new List<Texture2D> { this.moocow_brown } );
-        ToTexture2D( this.csr._renderTextureOutput, this.moocow_brown);
+        // this.csr.run(shader, this.textures);
+
+
+             _computeShader.SetFloat("_Resolution", _renderTextureOutput.width);
+
+        var main = _computeShader.FindKernel("NeuralNet");
+
+        _computeShader.SetFloat( "nn_rand", UnityEngine.Random.value);
+        _computeShader.SetTexture(main, "nn_1", this.cstex_1);
+        _computeShader.SetTexture(main, "nn_2", this.cstex_2);
+        _computeShader.SetTexture(main, "nn_3", this.cstex_3);
+        _computeShader.SetTexture(main, "nn_4", this.cstex_4);
+        _computeShader.SetTexture(main, "nn_5", this.cstex_5);
+        _computeShader.SetTexture(main, "nn_out", _renderTextureOutput);
+
+        _computeShader.GetKernelThreadGroupSizes(main, out uint xGroupSize, out uint yGroupSize, out uint zGroupSize);
+        _computeShader.Dispatch(main, _renderTextureOutput.width / (int) xGroupSize, _renderTextureOutput.height / (int) yGroupSize,
+            1);
+
+
+
+        ToTexture2D( this._renderTextureOutput, this.cstex_1);
+
+
+        for (int i = 0; i < Content.n_animals; i++)
+        {
+
+            int index = i * Content.neurons_per_animal;
+
+             for (int j = 0; j < Content.segments_per_animal; j++)
+            {
+                int here = index + j;
+
+                int x = here % this.g_size;
+                int y = here / this.g_size;
+
+                Color pixel = this.cstex_1.GetPixel(x,y);
+
+                JointMotor2D jmo = new JointMotor2D();
+                jmo.maxMotorTorque = 1000.0f;
+                jmo.motorSpeed = pixel.r * 360.0f;
+                
+                this.animals[i].segments[j].joint.motor = jmo;
+
+
+            }
+
+
+        }
+
+
+
+
     }
 }
