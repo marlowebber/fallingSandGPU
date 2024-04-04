@@ -77,7 +77,7 @@ public class Segment
         this.ea = this.go.AddComponent<ExampleClass>();
         // this.ea.owner = a;
 
-        Debug.Log("Ruu");
+        // Debug.Log("Ruu");
         this.connectedTo = UnityEngine.Random.Range(0,Content.segments_per_animal);
 
         this.col = this.go.AddComponent<BoxCollider2D>();
@@ -544,6 +544,52 @@ output texture with updated values which replaces texture 1 next round.
 
             }
 
+
+            float xadjust = 0.0f;
+            float yadjust = 0.0f;
+
+       
+            if (animals[i].segments[0].go.transform.position.x > Content.arena_size )
+            {   
+                xadjust = (animals[i].segments[0].go.transform.position.x  - Content.arena_size) * -1.0f;
+            }
+            else            if (animals[i].segments[0].go.transform.position.x < -Content.arena_size )
+            {   
+                xadjust = (animals[i].segments[0].go.transform.position.x  - (-Content.arena_size)) * -1.0f;
+            }
+
+            if (animals[i].segments[0].go.transform.position.y > Content.arena_size )
+            {   
+                yadjust = (animals[i].segments[0].go.transform.position.y  - Content.arena_size) * -1.0f;
+            }
+            else            if (animals[i].segments[0].go.transform.position.y < -Content.arena_size )
+            {   
+                yadjust = (animals[i].segments[0].go.transform.position.y  - (-Content.arena_size)) * -1.0f;
+            }
+
+
+
+
+
+            if (xadjust != 0.0f || yadjust != 0.0f)
+            {
+
+                for (int j = 0; j < Content.segments_per_animal; j++)
+                {
+                    animals[i].segments[j].go.transform.position = 
+                    new Vector3(
+
+                        animals[i].segments[j].go.transform.position.x + xadjust,
+                        animals[i].segments[j].go.transform.position.y + yadjust,
+
+                        0.0f
+
+
+                    )
+                    ;
+                }
+
+            }
 
         }
 
