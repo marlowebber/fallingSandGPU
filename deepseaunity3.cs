@@ -10,6 +10,39 @@ using UnityEngine.Profiling;
 using TMPro;
 
 
+
+
+public class ExampleClass : MonoBehaviour
+{
+    // public Transform explosionPrefab;
+    // public Animal owner;
+
+    public float sensation = 0.0f;
+
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        
+        // Debug.Log("Cucka Ween");
+
+        this.sensation = 1.0f;
+
+        ExampleClass ea = collision.gameObject.GetComponent<ExampleClass>();
+
+        ea.sensation = 1.0f;
+
+
+    }
+
+    void OnTriggerLeave2D(Collision2D collision)
+    {
+        this.sensation = 0.0f;
+
+        ExampleClass ea = collision.gameObject.GetComponent<ExampleClass>();
+        ea.sensation = 0.0f;
+    }
+}
+
+
 public class Segment
 {
     public Texture2D tex;
@@ -23,8 +56,9 @@ public class Segment
 
     public BoxCollider2D col;
 
+    public ExampleClass ea;
+    // public float sensation;
 
-    float sensation;
 
 
     public Segment(Vector2 pos)
@@ -38,13 +72,16 @@ public class Segment
         this.rb = this.go.AddComponent<Rigidbody2D>();
         this.rb.gravityScale = 0.0f;
 
-        this.sensation = 0.0f;
+        // this.sensation = 0.0f;
 
+        this.ea = this.go.AddComponent<ExampleClass>();
+        // this.ea.owner = a;
 
+        Debug.Log("Ruu");
         this.connectedTo = UnityEngine.Random.Range(0,Content.segments_per_animal);
 
         this.col = this.go.AddComponent<BoxCollider2D>();
-        this.col.isTrigger = true;
+        this.col.isTrigger = false;
         this.go.transform.localScale = new Vector3( UnityEngine.Random.value * Content.default_segment_size, UnityEngine.Random.value * Content.default_segment_size, this.go.transform.localScale.z);
 
 
@@ -222,8 +259,8 @@ output texture with updated values which replaces texture 1 next round.
 
 public static class Content
 {
-    public static int neurons_per_animal = 64;
     public static int segments_per_animal = 8;
+    public static int neurons_per_animal = 64;
     public static int n_animals = 256;
     public static float default_segment_size = 2.0f;
     public static float arena_size = 100;
@@ -434,6 +471,33 @@ output texture with updated values which replaces texture 1 next round.
     void Update()
     {
         // this.csr.run(shader, this.textures);
+
+
+
+
+   for (int i = 0; i < Content.n_animals; i++)
+        {
+
+
+            int index = i * Content.neurons_per_animal;
+
+             for (int j = 0; j < Content.segments_per_animal; j++)
+            {
+                int here = index + j + Content.segments_per_animal;
+
+                int x = here % this.g_size;
+                int y = here / this.g_size;
+
+                Color pixel = this.cstex_1.GetPixel(x,y);
+
+                this.cstex_1.SetPixel(x,y, new Color(  this.animals[i].segments[j].ea.sensation,  pixel.g, pixel.b, pixel.a  )  );
+
+            }
+
+        }
+        this.cstex_1.Apply();
+
+
 
 
              _computeShader.SetFloat("_Resolution", _renderTextureOutput.width);
