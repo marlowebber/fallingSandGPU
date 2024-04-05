@@ -54,6 +54,9 @@ public class EA : MonoBehaviour
                 {
                     this.world. animals[ other_ea.animal_index ] .segments[i].update_from_parameters();
                 }
+
+
+                this.world.mutate_animal(other_ea.animal_index);
             }
         }
     }
@@ -211,44 +214,31 @@ public class Animal
     }
 
 
+
+
     public void restrain()
     {
 
-        float xadjust = 0.0f;
-        float yadjust = 0.0f;
-    
-        if (this.segments[0].go.transform.position.x > Content.arena_size )
+        if (this.segments[0].go.transform.position.magnitude > Content.arena_size )
         {   
-            xadjust = (this.segments[0].go.transform.position.x  - Content.arena_size) * -1.0f;
-        }
-        else            if (this.segments[0].go.transform.position.x < -Content.arena_size )
-        {   
-            xadjust = (this.segments[0].go.transform.position.x  - (-Content.arena_size)) * -1.0f;
-        }
+       float angle = Mathf.Atan2(this.segments[0].go.transform.position.y, this.segments[0].go.transform.position.x);
+          float  diff = this.segments[0].go.transform.position.magnitude - Content.arena_size ;
 
-        if (this.segments[0].go.transform.position.y > Content.arena_size )
-        {   
-            yadjust = (this.segments[0].go.transform.position.y  - Content.arena_size) * -1.0f;
-        }
-        else            if (this.segments[0].go.transform.position.y < -Content.arena_size )
-        {   
-            yadjust = (this.segments[0].go.transform.position.y  - (-Content.arena_size)) * -1.0f;
-        }
 
-        if (xadjust != 0.0f || yadjust != 0.0f)
-        {
-
-            for (int j = 0; j < Content.segments_per_animal; j++)
+              for(int i = 0; i < Content.segments_per_animal; i++)
             {
-                this.segments[j].go.transform.position = 
-                new Vector3(
-                    this.segments[j].go.transform.position.x + xadjust,
-                    this.segments[j].go.transform.position.y + yadjust,
-                    0.0f
-                )
-                ;
+                this.segments[i].go.transform.position = new Vector3( 
+
+this.segments[i].go.transform.position.x - (Mathf.Cos(angle) * diff),
+this.segments[i].go.transform.position.y - (Mathf.Sin(angle) * diff),
+0.0f
+
+                  );
             }
         }
+
+      
+      
 
     }
 }
@@ -384,6 +374,219 @@ public class deepseaunity3 : MonoBehaviour
 
 
 
+
+    public void mutate_animal(int animal_index)
+    {
+        int mutation_category = UnityEngine.Random.Range(0,1);
+        if (mutation_category == 0)
+        {
+            // body mutation
+            int mutated_segment = UnityEngine.Random.Range(0,8);
+            int mutation_type = UnityEngine.Random.Range(0,3);
+
+            if (mutation_type == 0)
+            {
+                // segment width
+                this.animals[animal_index].segments[mutated_segment].width += (UnityEngine.Random.value) - 0.5f;
+            }
+            else if (mutation_type == 1)
+            {
+                // segment length
+                this.animals[animal_index].segments[mutated_segment].length += (UnityEngine.Random.value) - 0.5f;
+            }
+            else if (mutation_type == 2)
+            {
+                // segment connection
+                this.animals[animal_index].segments[mutated_segment].connectedTo = (UnityEngine.Random.Range(0,mutated_segment));
+            }
+        }
+        else
+        {
+            // mental mutation
+            int mutation_type = UnityEngine.Random.Range(0,2);
+            int mutated_neuron = UnityEngine.Random.Range(0, Content.neurons_per_animal);
+
+            int baselel = animal_index * Content.neurons_per_animal;
+
+            int here = baselel + mutated_neuron;
+            int x = here % Content.g_size;
+            int y = here / Content.g_size;
+
+            int random_connection = UnityEngine.Random.Range(0,8);
+
+            if (mutation_type == 0)
+            {
+                // bias mutation
+                Color temp = this.cstex_1.GetPixel(x,y);
+                temp.g += (UnityEngine.Random.value - 0.5f);
+                this.cstex_1.SetPixel(x,y,temp);
+
+            }
+            else if (mutation_type == 1)
+            {
+                // connection addresses
+                switch(random_connection)
+                {
+                    case 0:
+                    {
+                        Color temp = this.cstex_1.GetPixel(x,y);
+                        temp.b = UnityEngine.Random.Range(0,Content.neurons_per_animal);
+                        this.cstex_1.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 1:
+                    {
+                        Color temp = this.cstex_2.GetPixel(x,y);
+                        temp.r = UnityEngine.Random.Range(0,Content.neurons_per_animal);
+                        this.cstex_2.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 2:
+                    {
+                        Color temp = this.cstex_2.GetPixel(x,y);
+                        temp.b = UnityEngine.Random.Range(0,Content.neurons_per_animal);
+                        this.cstex_2.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 3:
+                    {
+                        Color temp = this.cstex_3.GetPixel(x,y);
+                        temp.r = UnityEngine.Random.Range(0,Content.neurons_per_animal);
+                        this.cstex_3.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 4:
+                    {
+                        Color temp = this.cstex_3.GetPixel(x,y);
+                        temp.b = UnityEngine.Random.Range(0,Content.neurons_per_animal);
+                        this.cstex_3.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 5:
+                    {
+                        Color temp = this.cstex_4.GetPixel(x,y);
+                        temp.r = UnityEngine.Random.Range(0,Content.neurons_per_animal);
+                        this.cstex_4.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 6:
+                    {
+                        Color temp = this.cstex_4.GetPixel(x,y);
+                        temp.b = UnityEngine.Random.Range(0,Content.neurons_per_animal);
+                        this.cstex_4.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 7:
+                    {
+                        Color temp = this.cstex_5.GetPixel(x,y);
+                        temp.r = UnityEngine.Random.Range(0,Content.neurons_per_animal);
+                        this.cstex_5.SetPixel(x,y,temp);
+                        break;
+                    }
+                }
+
+            }
+            else if (mutation_type == 2)
+            {
+                // connection weight
+                switch(random_connection)
+                {
+                    case 0:
+                    {
+                        Color temp = this.cstex_1.GetPixel(x,y);
+                        temp.a += UnityEngine.Random.value - 0.5f;
+                        this.cstex_1.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 1:
+                    {
+                        Color temp = this.cstex_2.GetPixel(x,y);
+                        temp.g += UnityEngine.Random.value - 0.5f;
+                        this.cstex_2.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 2:
+                    {
+                        Color temp = this.cstex_2.GetPixel(x,y);
+                        temp.a += UnityEngine.Random.value - 0.5f;
+                        this.cstex_2.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 3:
+                    {
+                        Color temp = this.cstex_3.GetPixel(x,y);
+                        temp.g += UnityEngine.Random.value - 0.5f;
+                        this.cstex_3.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 4:
+                    {
+                        Color temp = this.cstex_3.GetPixel(x,y);
+                        temp.a += UnityEngine.Random.value - 0.5f;
+                        this.cstex_3.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 5:
+                    {
+                        Color temp = this.cstex_4.GetPixel(x,y);
+                        temp.g += UnityEngine.Random.value - 0.5f;
+                        this.cstex_4.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 6:
+                    {
+                        Color temp = this.cstex_4.GetPixel(x,y);
+                        temp.a += UnityEngine.Random.value - 0.5f;
+                        this.cstex_4.SetPixel(x,y,temp);
+                        break;
+                    }
+                    case 7:
+                    {
+                        Color temp = this.cstex_5.GetPixel(x,y);
+                        temp.g += UnityEngine.Random.value - 0.5f;
+                        this.cstex_5.SetPixel(x,y,temp);
+                        break;
+                    }
+                }
+
+            }
+        }
+
+
+         for(int i = 0; i<Content.segments_per_animal;i++)
+        {
+            const float color_mutation_rate = 0.35f;
+            Color old =  this.animals[animal_index].segments[i].color ;
+            this.animals[animal_index].segments[i].color = new Color(
+                old.r + ((UnityEngine.Random.value - 0.5f) * color_mutation_rate),
+                old.g + ((UnityEngine.Random.value - 0.5f) * color_mutation_rate),
+                old.b + ((UnityEngine.Random.value - 0.5f) * color_mutation_rate),
+                1.0f
+
+
+            );
+        }
+
+
+        // body
+            // segment width
+            // segment length
+            // segment attach
+
+        // brain
+            // connection index
+            // weight
+            // bias
+
+
+        // modify color every time
+
+        
+    }
+
+
+
+
     public void duplicate_brain(int to, int from)
     {
 
@@ -491,7 +694,7 @@ public class deepseaunity3 : MonoBehaviour
     Content.total_size = Content.n_animals * Content.neurons_per_animal;
     Content.square_size = (int)(Mathf.Sqrt(Content.total_size));
     Content.g_size = (int)(Mathf.Pow(2, Mathf.Ceil(Mathf.Log(Content.square_size)/Mathf.Log(2)))); // https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
-    Content.drag_coeff = 0.5f;
+    Content.drag_coeff = 1.0f;
 
       this.go = new GameObject();
         this.canvas = this.go.AddComponent<Canvas>();
@@ -617,6 +820,7 @@ public class deepseaunity3 : MonoBehaviour
                 this.animals[i].segments[j].joint.motor = jmo;
 
                 this.animals[i].segments[j].flight_model();
+                this.animals[i].restrain();
             }
 
            
