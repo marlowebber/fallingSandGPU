@@ -43,7 +43,7 @@ public class EA : MonoBehaviour
             if (other_ea.animal_index != this.animal_index)
             {
                // the collider 'heart' of the other animal has been 'stung' by your segment 8, which means you killed it and can transform it into one of your children.
-                Debug.Log("animal " + this.animal_index.ToString() + " stinged " +  other_ea.animal_index.ToString());
+                // Debug.Log("animal " + this.animal_index.ToString() + " stinged " +  other_ea.animal_index.ToString());
                 for(int i = 0; i < Content.segments_per_animal; i++)
                 {
                 this.world. animals[ other_ea.animal_index ] .segments[i].duplicate_from(this.world.animals[this.animal_index].segments[i]);
@@ -106,8 +106,46 @@ public class Segment
         this.joint.useLimits = false;
 
         this.go.transform.localScale = new Vector3(this.width, this.length, 1.0f);
+
+        this.sr.color = this.color;
        
 
+    }
+
+      public void flight_model()
+    {
+        
+
+            // s.last_world_pos.x = s.world_pos.x ;
+            // s.last_world_pos.y = s.world_pos.y ;
+            // s.world_pos.x =  s.center_pos.x - this.center_of_mass.x    +  this.world_position.x;
+            // s.world_pos.y =  s.center_pos.y - this.center_of_mass.y    +  this.world_position.y;
+            // Vector2 segment_velocity = s.velocity();
+
+
+            float rotation_rad = this.rb.rotation * (Mathf.PI / 180.0f);
+
+
+            float movement_angle = Mathf.Atan2(this.rb.velocity.y, this.rb.velocity.x);
+            float angle_of_incidence = Mathf.Atan2(Mathf.Sin(rotation_rad - movement_angle ), Mathf.Cos(rotation_rad - movement_angle));
+            float reactive_force = Mathf.Sin( angle_of_incidence)  * this.rb.velocity.magnitude * Content.drag_coeff * (this.length * this.width);
+            float face_normal = rotation_rad + (Mathf.PI * 0.5f);
+            this.rb.AddForce(
+                        // new Vector2(s.world_pos.x, s.world_pos.y),
+
+
+                        // face_normal, reactive_force
+                        new Vector2(
+                        Mathf.Cos(face_normal) * reactive_force,
+                        Mathf.Sin(face_normal) * reactive_force
+                        )
+                        
+                        );
+
+
+
+            // float distance_to_com =  Mathf.Sqrt((s.center_pos.x  * s.center_pos.x ) + (s.center_pos.y * s.center_pos.y));
+        
     }
 
     public Segment(Vector2 pos, int segment_index, int animal_index)
@@ -265,7 +303,7 @@ public static class Content
     public static int total_size             ; //Content.n_animals * Content.neurons_per_animal;
     public static int square_size            ; //(int)(Mathf.Sqrt(total_size));
     public static int g_size                 ; //(int)(Mathf.Pow(2, Mathf.Ceil(Mathf.Log(square_size)/Mathf.Log(2)))); // https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
-
+    public static float drag_coeff ;
 }
 
 
@@ -453,6 +491,7 @@ public class deepseaunity3 : MonoBehaviour
     Content.total_size = Content.n_animals * Content.neurons_per_animal;
     Content.square_size = (int)(Mathf.Sqrt(Content.total_size));
     Content.g_size = (int)(Mathf.Pow(2, Mathf.Ceil(Mathf.Log(Content.square_size)/Mathf.Log(2)))); // https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
+    Content.drag_coeff = 0.5f;
 
       this.go = new GameObject();
         this.canvas = this.go.AddComponent<Canvas>();
@@ -494,7 +533,7 @@ public class deepseaunity3 : MonoBehaviour
 
             for (int j = 0; j < Content.segments_per_animal; j++)
             {
-                int here = index + j + Content.segments_per_animal;
+                int here = index + j;;
 
 
                 int x = here % Content.g_size;
@@ -531,18 +570,53 @@ public class deepseaunity3 : MonoBehaviour
 
             for (int j = 0; j < Content.segments_per_animal; j++)
             {
-                int here = index + j;
+                int here = index + j + Content.segments_per_animal;
 
                 int x = here % Content.g_size;
                 int y = here / Content.g_size;
 
                 Color pixel = this.cstex_1.GetPixel(x,y);
 
+
+
+                    // float final_speed = 0.0f;
+                    // float gyro_force = 10.0f; // max limb speed
+
+                    // const float kp = 1.0f; // makes the animals point in a direction instead of spin like a motor. But unity wants to know spin speed. so this is a control loop to drive the segments.
+                    // const float kd = -0.3f;
+
+                    // float p = pixel.r - this.animals[i].segments[j].rb.rotation;
+                    // float d = this.animals[i].segments[j].rb.angularVelocity;
+                    // float sum = (p * kp) + (d * kd);
+                    // if (Mathf.Abs(sum) > gyro_force)
+                    // {
+                    //     if (sum < 0.0f)
+                    //     {
+                    //        final_speed = gyro_force * -1.0f;
+                    //     }
+                    //     else
+                    //     {
+                    //         final_speed = gyro_force;
+                    //     }
+                    // }
+                    // else
+                    // {
+                    //     final_speed = sum;
+                    // }
+                
+
+                float goatation = this.animals[i].segments[j].rb.rotation * (Mathf.PI / 180.0f);
+
+                float sublimit = (goatation - pixel.r) * 0.5f;
+
+
                 JointMotor2D jmo = new JointMotor2D();
                 jmo.maxMotorTorque = 1000.0f;
-                jmo.motorSpeed = pixel.r * 360.0f;
+                jmo.motorSpeed = sublimit;//0.0f;// final_speed * 360.0f;
                 
                 this.animals[i].segments[j].joint.motor = jmo;
+
+                this.animals[i].segments[j].flight_model();
             }
 
            
