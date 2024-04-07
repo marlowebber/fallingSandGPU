@@ -48,7 +48,7 @@ public class EA : MonoBehaviour
                     this.world.duplicate_brain( other_ea.animal_index, this.animal_index);
                     for(int i = 0; i < Content.segments_per_animal; i++)
                     {
-                        this.world. animals[ other_ea.animal_index ] .segments[i].update_from_parameters();
+                        this.world. animals[ other_ea.animal_index ] .segments[i].update_from_parameters(i);
                     }
                     this.world.mutate_animal(other_ea.animal_index);
                 }
@@ -87,8 +87,10 @@ public class Segment
         this.connectedTo = other.connectedTo;
     }
 
-    public void update_from_parameters()
+    public void update_from_parameters(int segment_index)
     {
+        if (segment_index != 0)
+        {
         this.joint.enableCollision = false;
         this.joint.breakForce = Mathf.Infinity;
         this.joint.autoConfigureConnectedAnchor = false;
@@ -97,6 +99,7 @@ public class Segment
         this.joint.connectedAnchor = new Vector2(0.0f, -(this.ea.world.animals[ this.ea.animal_index ] .segments[ this.connectedTo ].go.transform.localScale.x/2));
         this.joint.useMotor = true;
         this.joint.useLimits = false;
+        }
         this.go.transform.localScale = new Vector3(this.width, this.length, 1.0f);
         this.sr.color = this.color;
         this.rb.mass = this.length * this.width;
@@ -138,12 +141,19 @@ public class Segment
                 this.col.isTrigger = false;
             }
         }
-        this.joint = this.go.AddComponent<HingeJoint2D>();
+
+        if (segment_index != 0)
+        {
+            this.joint = this.go.AddComponent<HingeJoint2D>();
+        }
         this.go.transform.position = pos;
         this.length = UnityEngine.Random.value * 2.0f;
         this.width = UnityEngine.Random.value * 2.0f;
         this.connectedTo = UnityEngine.Random.Range(0,segment_index);
         this.color = new Color(UnityEngine.Random.value,UnityEngine.Random.value,UnityEngine.Random.value,1.0f);
+
+
+        this.rb.AddForce( new Vector2(UnityEngine.Random.value * 200.0f,UnityEngine.Random.value * 200.0f));
         
     }
 }
@@ -308,7 +318,7 @@ public class deepseaunity3 : MonoBehaviour
         {
             for(int jj = 0; jj < Content.segments_per_animal; jj+=7)
             {
-                this.animals[i].segments[jj].update_from_parameters();
+                this.animals[i].segments[jj].update_from_parameters(jj);
                 for(int jq = 0; jq < Content.segments_per_animal; jq+=7)
                 {
                     Physics2D.IgnoreCollision(this.animals[i].segments[jj ].col, this.animals[i].segments[jq].col)   ;
@@ -338,7 +348,18 @@ public class deepseaunity3 : MonoBehaviour
             else if (mutation_type == 2)
             {
                 // segment connection
-                this.animals[animal_index].segments[mutated_segment].connectedTo = (UnityEngine.Random.Range(0,mutated_segment));
+                int nrs = (UnityEngine.Random.Range(0,mutated_segment));
+
+                if (mutated_segment != 0)
+                {
+                    if (nrs == mutated_segment)
+                    {
+                        nrs -= 1;
+                    }
+                }
+
+
+                this.animals[animal_index].segments[mutated_segment].connectedTo = nrs;
             }
     }
 
@@ -633,13 +654,29 @@ public class deepseaunity3 : MonoBehaviour
 
                 int animal_index = addr_here / Content.neurons_per_animal;
                 int neuron_index = addr_here % Content.neurons_per_animal;
+                int layer_index = neuron_index / Content.segments_per_animal;
 
 
-                cstex_1.SetPixel(x, y, new Color((UnityEngine.Random.value-0.5f)*20.0f, (UnityEngine.Random.value-0.5f)*20.0f, UnityEngine.Random.Range(0,8), (UnityEngine.Random.value - 0.5f) * 20.0f));
-                cstex_2.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f));
-                cstex_3.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f));
-                cstex_4.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f));
-                cstex_5.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f));
+                // cstex_1.SetPixel(x, y, new Color((UnityEngine.Random.value-0.5f)*20.0f, (UnityEngine.Random.value-0.5f)*20.0f, UnityEngine.Random.Range(0,8), (UnityEngine.Random.value - 0.5f) * 20.0f));
+                // cstex_2.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f));
+                // cstex_3.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f));
+                // cstex_4.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,Content.neurons_per_animal), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f));
+                // cstex_5.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,Content.neurons_per_animal), (UnityEngine.Random.value - 0.5f) * 20.0f, UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f));
+            
+                float val = 10.0f;
+                if (layer_index == 1)
+                {
+                    val = -10.0f;
+                }
+
+                cstex_1.SetPixel(x, y, new Color((UnityEngine.Random.value-0.5f)*20.0f, (UnityEngine.Random.value-0.5f)*20.0f, UnityEngine.Random.Range(0,neuron_index), (UnityEngine.Random.value - 0.5f) * 20.0f));
+                cstex_2.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,neuron_index), val, UnityEngine.Random.Range(0,neuron_index), layer_index));
+                cstex_3.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,neuron_index), val, UnityEngine.Random.Range(0,neuron_index), layer_index));
+                cstex_4.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,Content.neurons_per_animal), val, UnityEngine.Random.Range(0,neuron_index), val));
+                cstex_5.SetPixel(x, y, new Color(UnityEngine.Random.Range(0,Content.neurons_per_animal), val, UnityEngine.Random.Range(0,neuron_index), val));
+           
+
+            
             }
         }
         cstex_1.Apply();
@@ -693,11 +730,34 @@ public class deepseaunity3 : MonoBehaviour
         this.prepared = true;
     }
 
+    void scramble()
+    {
+        for(int i = 0; i < Content.g_size; i++)
+        {
+            int x2 = i % Content.g_size;
+            int y2 = i / Content.g_size;
+            Color pixel1 = this.cstex_1.GetPixel(x2,y2);
+
+            this.cstex_1.SetPixel(x2,y2, new Color(  pixel1.r + ((UnityEngine.Random.value-0.5f)*20.0f),  pixel1.g, pixel1.b, pixel1.a  )  );
+
+
+
+        }
+    }
+
     // Update is called once per frame
     void Update()
     {
         if (this.prepared)
         {
+
+             if (Input.GetKey("d"))
+            {
+                // print("up arrow key is held down");
+                this.scramble();
+            }
+
+
 
              var main = _computeShader.FindKernel("NeuralNet");
 
@@ -723,8 +783,21 @@ public class deepseaunity3 : MonoBehaviour
                     float sublimit = (goatation - pixel2.r) * 0.5f;
                     JointMotor2D jmo = new JointMotor2D();
                     jmo.maxMotorTorque = this.animals[animal_index].segments[segment_index].length * this.animals[animal_index].segments[segment_index].width;
+
+                    if (sublimit > 10.0f)
+                    {
+                        sublimit = 10.0f;
+                    }
+                    else if (sublimit < -10.0f)
+                    {
+                        sublimit = -10.0f;
+                    }
+
                     jmo.motorSpeed = sublimit;
-                    this.animals[animal_index].segments[segment_index].joint.motor = jmo;
+                    if (segment_index != 0)
+                    {
+                        this.animals[animal_index].segments[segment_index].joint.motor = jmo;    
+                    }
 
 
                     int here1 = animal_base + segment_index;
