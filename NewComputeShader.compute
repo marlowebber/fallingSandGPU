@@ -1,30 +1,3 @@
-
-#pragma kernel FallingSand
-
-float falling_rand;
-Texture2D<float4> ResultInput;
-RWTexture2D<float4> ResultOutput;
-
-[numthreads(8,8,1)]
-
-void FallingSand (uint3 id : SV_DispatchThreadID)
-{
-	float2 below = float2(id.x  + (falling_rand * 5) - 2  , id.y  -1   );
-	if (ResultInput[id.xy].r > 0.5)
-	{
-		if (ResultInput[below].r < 0.5 && id.y > 5 && id.x > 5 && id.x < 1024-5)
-		{
-			ResultOutput[below] = float4(1.0, 0.0, 0.0, 1.0);
-			ResultOutput[id.xy] = float4(0.0, 0.0, 0.0, 1.0);
-		}
-	}
-}
-
-
-
-
-
-
 #pragma kernel Airflow
 
 float airflow_rand;
@@ -36,118 +9,38 @@ RWTexture2D<float4> airflow_output	;
 void Airflow (uint3 id : SV_DispatchThreadID)
 {
 	const int size = 1024;
-	// R is vel_x, green is vel_y, and blue is pressure
-
-	const float k_pv = 0.125;
-	const float k_sm = 0.125;
-	const float k_tkv = 1.0;
-	const float k_tkd = 1.0;
 	
+	float spring_height_center = airflow_input[id.xy].r - 0.5;
+	float spring_speed_center = airflow_input[id.xy].g - 0.5;
+	float avg_nbr_height = 0.0;
+	float nbrs = 0.0;
 	
-	float dp = 0.0;
-	float dx = 0.0;
-	float dy = 0.0;
-	
-	// pv interchange
-	float4 air_here  = airflow_input[id.xy];
-	float4 air_below = airflow_input[ float2(id.x, id.y-1)];
-	float4 air_above = airflow_input[ float2(id.x, id.y+1)];
-	float4 air_l     = airflow_input[ float2(id.x-1, id.y)];
-	float4 air_r     = airflow_input[ float2(id.x+1, id.y)];
-	
-	dp -= (air_here.r  - air_l.r    ) * k_pv;
-	dp -= (air_here.r  - air_r.r    ) * k_pv * -1;
-	dp -= (air_here.g -  air_below.g) * k_pv * -1;
-	dp -= (air_here.g  - air_above.g) * k_pv ;
-	dx -= (air_here.b  - air_l.b    ) * k_pv ;
-	dx -= (air_here.b  - air_r.b    ) * k_pv * -1;
-	dy -= (air_here.b  - air_below.b) * k_pv * -1;
-	dy -= (air_here.b  - air_above.b) * k_pv;
-	
-	// smoothing
-	float4 avg = (air_here + air_below + air_above + air_l + air_r) / 5;
-	dx += (avg.r - air_here.r) * k_sm;
-	dy += (avg.g - air_here.g) * k_sm;
-	dp += (avg.b - air_here.b) * k_sm;
-	
-	// take
-	float2 take_from_pos = float2(id.x + (air_here.r  * k_tkd), id.y + (air_here.g * k_tkd) );
-	dx -= ( air_here.r - airflow_input[take_from_pos].r     ) * k_tkv;
-	dy -= ( air_here.g - airflow_input[take_from_pos].g     ) * k_tkv;
-	
-	
-	airflow_output[id.xy] = float4(  airflow_input[id.xy].r + dx,  airflow_input[id.xy].g + dy, airflow_input[id.xy].b + dp, 1.0  );
-	
-	if (id.x < 5  || id.x > size - 5 || id.y < 5 || id.y > size- 5)
+	for(float y = -1.0; y <= 1.0; y+=1.0)
 	{
-		airflow_output[id.xy] = float4( 0.5,  0.5, 0.5, 1.0  );
+		for(float x = -1.0; x <= 1.0; x+=1.0)
+		{
+			if (x == 0.0 && y == 0.0)
+			{
+				continue;
+			}
+			float2 nbr = float2(id.x+x,id.y+y);
+			float spring_height_here =  airflow_input[nbr].r - 0.5;
+			avg_nbr_height += spring_height_here;
+		}
 	}
+	
+	avg_nbr_height = avg_nbr_height/8.0;
+	float spring_force_now = (avg_nbr_height - spring_height_center) * 0.5;
+	spring_force_now -= spring_height_center * 0.0005;
+	spring_speed_center += spring_force_now;
+	spring_height_center += spring_speed_center;
+	airflow_output[id.xy] = float4( spring_height_center+0.5 , spring_speed_center+0.5 , 0.0 , 1.0  );	
+	if (id.x < 5  || id.x > size - 5 || id.y < 5 || id.y > size- 5){airflow_output[id.xy] = float4( 0.5,  0.0, 0.0, 1.0  );}
 }
 
 
 
 
 
-
-
-
-# pragma kernel NeuralNet
-
-float nn_rand;
-
-Texture2D<float4> nn_1;
-Texture2D<float4> nn_2;
-Texture2D<float4> nn_3;
-Texture2D<float4> nn_4;
-Texture2D<float4> nn_5;
-
-RWTexture2D<float4> nn_out;
-
-[numthreads(8,8,1)]
-
-
-
-void NeuralNet (uint3 id : SV_DispatchThreadID)
-{
-
-const int neurons_per_animal = 64;
-const int tsize = 256; // length of one side of the texture
-int this_animal_index = id.xy % neurons_per_animal;
-
-float bias = 		nn_1[id.xy].g;
-float new_value = 	bias;
-
-int addr1 = (this_animal_index*neurons_per_animal) + nn_1[id.xy].b;
-float weight1 = nn_1[id.xy].a;
-new_value += nn_1[  float2(addr1%tsize, addr1/tsize)  ].r * weight1;
-
-int addr2 = this_animal_index + nn_2[id.xy].r;
-new_value += nn_1[float2(addr2%tsize, addr2/tsize) ].r * nn_2[id.xy].g;
-
-int addr3 = this_animal_index + nn_2[id.xy].b;
-new_value += nn_1[float2(addr3%tsize, addr3/tsize) ].r * nn_2[id.xy].a;
-
-int addr4 = this_animal_index + nn_3[id.xy].r;
-new_value += nn_1[float2(addr4%tsize, addr4/tsize) ].r * nn_3[id.xy].g;
-
-int addr5 = this_animal_index + nn_3[id.xy].b;
-new_value += nn_1[float2(addr5%tsize, addr5/tsize) ].r * nn_1[id.xy].a;
-
-int addr6 = this_animal_index + nn_4[id.xy].r;
-new_value += nn_1[float2(addr6%tsize, addr6/tsize) ].r * nn_1[id.xy].g;
-
-int addr7 = this_animal_index + nn_4[id.xy].b;
-new_value += nn_1[float2(addr7%tsize, addr7/tsize) ].r * nn_1[id.xy].a;
-
-int addr8 = this_animal_index + nn_5[id.xy].r;
-new_value += nn_1[float2(addr8%tsize, addr8/tsize) ].r * nn_1[id.xy].g;
-
-nn_out[id.xy] = float4( new_value, bias,  addr1, weight1 );
-
-
-
-
-
-}
 
 
