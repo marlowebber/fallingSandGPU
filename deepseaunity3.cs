@@ -120,10 +120,10 @@ public class deepseaunity3 : MonoBehaviour
 
 
 
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKey(KeyCode.Space))
             {
 
-                const int bloopsize = 100;
+                const int bloopsize = 1000;
  for(int y = -bloopsize/2; y < bloopsize/2; y++)
         {
             for(int x = -bloopsize/2; x < bloopsize/2; x++)
@@ -135,8 +135,8 @@ public class deepseaunity3 : MonoBehaviour
 
                 if (Mathf.Sqrt( (fx*fx) + (fy*fy)  )  < bloopsize/2)
                 {
-
-                cstex_1.SetPixel(this.g_size/2 + x, this.g_size/2 + y, new Color(0.5f,1.0f,0.0f,1.0f) );
+                    
+                cstex_1.SetPixel(this.g_size/2 + x, this.g_size/2 + y, new Color( UnityEngine.Random.value ,0.0f,0.0f,1.0f) );
                 }
 
          

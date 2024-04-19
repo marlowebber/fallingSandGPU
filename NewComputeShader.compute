@@ -1,17 +1,17 @@
-#pragma kernel Airflow
+#pragma kernel Shockwave
 
-float airflow_rand;
-Texture2D<float4> airflow_input;
-RWTexture2D<float4> airflow_output	;
+float shockwave_rand;
+Texture2D<float4> shockwave_input;
+RWTexture2D<float4> shockwave_output	;
 
 [numthreads(8,8,1)]
 
-void Airflow (uint3 id : SV_DispatchThreadID)
+void Shockwave (uint3 id : SV_DispatchThreadID)
 {
 	const int size = 1024;
 	
-	float spring_height_center = airflow_input[id.xy].r - 0.5;
-	float spring_speed_center = airflow_input[id.xy].g - 0.5;
+	float spring_height_center = shockwave_input[id.xy].r - 0.5;
+	float spring_speed_center = shockwave_input[id.xy].g - 0.5;
 	float avg_nbr_height = 0.0;
 	float nbrs = 0.0;
 	
@@ -24,7 +24,7 @@ void Airflow (uint3 id : SV_DispatchThreadID)
 				continue;
 			}
 			float2 nbr = float2(id.x+x,id.y+y);
-			float spring_height_here =  airflow_input[nbr].r - 0.5;
+			float spring_height_here =  shockwave_input[nbr].r - 0.5;
 			avg_nbr_height += spring_height_here;
 		}
 	}
@@ -34,9 +34,110 @@ void Airflow (uint3 id : SV_DispatchThreadID)
 	spring_force_now -= spring_height_center * 0.0005;
 	spring_speed_center += spring_force_now;
 	spring_height_center += spring_speed_center;
-	airflow_output[id.xy] = float4( spring_height_center+0.5 , spring_speed_center+0.5 , 0.0 , 1.0  );	
-	if (id.x < 5  || id.x > size - 5 || id.y < 5 || id.y > size- 5){airflow_output[id.xy] = float4( 0.5,  0.0, 0.0, 1.0  );}
+	shockwave_output[id.xy] = float4( spring_height_center+0.5 , spring_speed_center+0.5 , 0.0 , 1.0  );	
+	if (id.x < 5  || id.x > size - 5 || id.y < 5 || id.y > size- 5){shockwave_output[id.xy] = float4( 0.5,  0.0, 0.0, 1.0  );}
 }
+
+
+
+
+
+#pragma kernel GameOfLife
+
+float gol_rand;
+Texture2D<float4> gol_input;
+RWTexture2D<float4> gol_output	;
+
+[numthreads(8,8,1)]
+
+void GameOfLife (uint3 id : SV_DispatchThreadID)
+{
+	const int size = 1024;
+	static const float pi = 3.14159265;
+	
+	float alive_nbrs = 0.0;
+	float alive_here = gol_input[id.xy].r;
+	for(float y = -1.0; y <= 1.0; y+=1.0)
+	{
+		for(float x = -1.0; x <= 1.0; x+=1.0)
+		{
+			if (x == 0.0 && y == 0.0)
+			{
+				continue;
+			}
+			float2 nbr = float2(id.x + x, id.y + y);
+			if (gol_input[nbr].r > 0.5)
+			{
+				alive_nbrs += 1.0;
+			}
+		}
+	}
+
+	if (alive_here > 0.5)
+	{
+		if (alive_nbrs >= 2.0 && alive_nbrs <= 3.0)
+		{
+			; // stay alive
+		}
+		else
+		{
+			alive_here = 0.0;
+		}
+	}
+	else
+	{
+		if (alive_nbrs == 3.0)
+		{
+			alive_here = 1.0;
+		}
+	}
+	gol_output[id.xy] = float4( alive_here, alive_here, alive_here, 1.0f );
+	
+}
+
+
+
+
+
+
+
+
+#pragma kernel Airflow
+
+float airflow_rand;
+Texture2D<float4> airflow_input;
+RWTexture2D<float4> airflow_output	;
+
+[numthreads(8,8,1)]
+
+void Airflow (uint3 id : SV_DispatchThreadID)
+{
+	const int size = 1024;
+	static const float pi = 3.14159265;
+	
+	
+	float alive_here = airflow_input[id.xy].r;
+	for(float y = -1.0; y <= 1.0; y+=1.0)
+	{
+		for(float x = -1.0; x <= 1.0; x+=1.0)
+		{
+			if (x == 0.0 && y == 0.0)
+			{
+				continue;
+			}
+
+		}
+	}
+
+	airflow_output[id.xy] = float4( alive_here, alive_here, alive_here, 1.0f );
+		
+}
+
+
+
+
+
+
 
 
 
