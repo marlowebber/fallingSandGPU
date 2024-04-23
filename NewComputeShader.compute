@@ -1,6 +1,5 @@
 #pragma kernel Shockwave
 
-float shockwave_rand;
 Texture2D<float4> shockwave_input;
 RWTexture2D<float4> shockwave_output	;
 
@@ -44,7 +43,6 @@ void Shockwave (uint3 id : SV_DispatchThreadID)
 
 #pragma kernel GameOfLife
 
-float gol_rand;
 Texture2D<float4> gol_input;
 RWTexture2D<float4> gol_output	;
 
@@ -101,22 +99,160 @@ void GameOfLife (uint3 id : SV_DispatchThreadID)
 
 
 
+// https://matthias-research.github.io/pages/tenMinutePhysics/17-fluidSim.pdf
 
-#pragma kernel Airflow
 
-float airflow_rand;
-Texture2D<float4> airflow_input;
-RWTexture2D<float4> airflow_output	;
+/*
+
+
+
+the program needs to modify 3 cells value per index per turn, but can't do this in a single pass due to thread safety.
+
+
+
+
+
+  initial --- >    cell (i,j) changes made
+  		   cell
+
+
+
+ 
+ 
+ airflow1 adds the contribution to cell n, and airflow2 adds the contribution to n+1 while ensuring symmetrical behavior.
+
+
+
+
+
+
+
+
+
+
+
+
+
+*/
+
+#pragma kernel Divergence1
+
+Texture2D<float4>   divergence1_input;
+
+RWTexture2D<float4> divergence1_output	;
 
 [numthreads(8,8,1)]
 
-void Airflow (uint3 id : SV_DispatchThreadID)
+void Divergence1 (uint3 id : SV_DispatchThreadID)
+{
+
+	// the function writes B as x+1 changes and A as y+1 changes.
+	// after the whole texture is finished processing, the changes on B and A channels are recombined. 
+
+	const int size = 1024;
+	float flowx1 =	divergence1_input[ float2( id.x,id.y ) ].r - 0.5;
+	float flowx2 =	(divergence1_input[ float2( id.x+1,id.y ) ].r - 0.5 );
+	float flowy1 =	divergence1_input[ float2( id.x,id.y ) ].g - 0.5;
+	float flowy2 =	(divergence1_input[ float2( id.x,id.y+1 ) ].g - 0.5 );
+	float inflowx = flowx1 - flowx2;
+	float inflowy = flowy1 - flowy2;
+	float totalinflow = inflowx + inflowy;
+	float adjust = totalinflow / 4;
+	
+	
+	
+	
+	
+	
+	
+	
+	divergence1_output[id.xy]               = float4 ( flowx1 - adjust + 0.5, flowy1 - adjust + 0.5 ,   adjust + 0.5  , adjust+ 0.5);
+	
+	
+	if (id.x < 5  || id.x > size - 5 || id.y < 5 || id.y > size- 5){divergence1_output[id.xy] = float4( 0.5,  0.5, 0.5, 1.0  );}
+	
+	
+}
+
+
+
+
+#pragma kernel Divergence2
+
+Texture2D<float4>   divergence2_input;
+
+RWTexture2D<float4> divergence2_output	;
+
+[numthreads(8,8,1)]
+
+void Divergence2 (uint3 id : SV_DispatchThreadID)
+{
+
+	
+	divergence2_output [id.xy] = float4(
+	
+		((divergence2_input[float2(id.x, id.y)].r -0.5)+ (divergence2_input[float2(id.x-1, id.y)].b - 0.5)) + 0.5,
+		((divergence2_input[float2(id.x, id.y)].g -0.5)+ (divergence2_input[float2(id.x, id.y-1)].a - 0.5)) + 0.5,
+		0.0,
+		1.0
+	);
+}
+
+
+
+
+
+#pragma kernel Advect1
+
+Texture2D<float4>   advect1_input;
+
+RWTexture2D<float4> advect1_output	;
+
+[numthreads(8,8,1)]
+
+void Advect1 (uint3 id : SV_DispatchThreadID)
 {
 	const int size = 1024;
-	static const float pi = 3.14159265;
+	
+	/* velx is r and vely is g */
 	
 	
-	float alive_here = airflow_input[id.xy].r;
+	
+	float flowx1 =	advect1_input[ float2( id.x,id.y ) ].r - 0.5;
+	float flowy1 =	advect1_input[ float2( id.x,id.y ) ].g - 0.5;
+
+	const float kt = 50.0;
+	flowx1 *= kt;
+	flowy1 *= kt;
+
+	float2 take = float2(  id.x + flowx1,  id.y + flowy1 );
+	float4 minugs = advect1_input[take];
+	
+	
+	advect1_output[id.xy] = minugs;
+	
+			
+}
+
+
+
+#pragma kernel Diffuse1
+
+Texture2D<float4>   diffuse1_input;
+
+RWTexture2D<float4> diffuse1_output	;
+
+[numthreads(8,8,1)]
+
+void Diffuse1 (uint3 id : SV_DispatchThreadID)
+{
+	const int size = 1024;
+	
+	/* velx is r and vely is g */
+	
+	float avgx = diffuse1_input[id.xy].r - 0.5;
+	float avgy = diffuse1_input[id.xy].r - 0.5;
+	
 	for(float y = -1.0; y <= 1.0; y+=1.0)
 	{
 		for(float x = -1.0; x <= 1.0; x+=1.0)
@@ -125,21 +261,15 @@ void Airflow (uint3 id : SV_DispatchThreadID)
 			{
 				continue;
 			}
-
+			avgx += diffuse1_input[float2(id.x + x, id.y + y)].r - 0.5;
+			avgy += diffuse1_input[float2(id.x + x, id.y + y)].g - 0.5;
 		}
 	}
-
-	airflow_output[id.xy] = float4( alive_here, alive_here, alive_here, 1.0f );
-		
+	avgx = avgx / 9;
+	avgy = avgy / 9;
+	diffuse1_output[id.xy] = float4(avgx + 0.5, avgy + 0.5, 0.0, 1.0);
+			
 }
-
-
-
-
-
-
-
-
 
 
 
