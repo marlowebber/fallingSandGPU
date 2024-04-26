@@ -135,76 +135,194 @@ the program needs to modify 3 cells value per index per turn, but can't do this 
 
 */
 
-#pragma kernel Divergence1
 
-Texture2D<float4>   divergence1_input;
-
-RWTexture2D<float4> divergence1_output	;
-
-[numthreads(8,8,1)]
-
-void Divergence1 (uint3 id : SV_DispatchThreadID)
+float4 advect_lookup( RWTexture2D<float4> divergence1_input, float2 pos )
 {
 
-	// the function writes B as x+1 changes and A as y+1 changes.
-	// after the whole texture is finished processing, the changes on B and A channels are recombined. 
-
 	const int size = 1024;
-	float flowx1 =	divergence1_input[ float2( id.x,id.y ) ].r - 0.5;
-	float flowx2 =	(divergence1_input[ float2( id.x+1,id.y ) ].r - 0.5 );
-	float flowy1 =	divergence1_input[ float2( id.x,id.y ) ].g - 0.5;
-	float flowy2 =	(divergence1_input[ float2( id.x,id.y+1 ) ].g - 0.5 );
-	float inflowx = flowx1 - flowx2;
-	float inflowy = flowy1 - flowy2;
-	float totalinflow = inflowx + inflowy;
-	float adjust = totalinflow / 4;
+	
+	
+	
+	
+	
+	float groat = 1.0; //abs(divergence1_input[pos].z);
+	float take_x = divergence1_input[pos].x * groat ;
+	float take_y = divergence1_input[pos].y * groat;
+	
+	
+
+	 float2 take = float2(take_x, take_y);
+	
+	
+	float4 nbr1 = divergence1_input[pos + float2(0,1)];
+	float4 nbr2 = divergence1_input[pos + float2(0,-1)];
+	float4 nbr3 = divergence1_input[pos + float2(1,0)];
+	float4 nbr4 = divergence1_input[pos + float2(-1,0)];
+	take += nbr1.xy * nbr1.z;
+	take += nbr2.xy * nbr1.z;
+	take += nbr3.xy * nbr1.z;
+	take += nbr4.xy * nbr1.z;
+	take = take / 5.0;
+	
+	take *= size;
 	
 	
 	
 	
 	
 	
+	float4 pagd = divergence1_input[pos - take];
+	/*
+	pagd += divergence1_input[take + float2(0,1)];
+	pagd += divergence1_input[take + float2(0,-1)];
+	pagd += divergence1_input[take + float2(1,0)];
+	pagd += divergence1_input[take + float2(-1,0)];
+	pagd = pagd / 5.0;
+	*/
+	return pagd ;
 	
 	
-	divergence1_output[id.xy]               = float4 ( flowx1 - adjust + 0.5, flowy1 - adjust + 0.5 ,   adjust + 0.5  , adjust+ 0.5);
-	
-	
-	if (id.x < 5  || id.x > size - 5 || id.y < 5 || id.y > size- 5){divergence1_output[id.xy] = float4( 0.5,  0.5, 0.5, 1.0  );}
-	
-	
+	// return divergence1_input[take];
+
 }
 
 
 
+#pragma kernel Divergence1
 
+RWTexture2D<float4>   divergence1_in;
+
+RWTexture2D<float4>   divergence1_out;
+
+RWTexture2D<float4> divergence1_display;
+
+[numthreads(8,8,1)]
+
+
+
+
+void Divergence1 (uint3 id : SV_DispatchThreadID)
+{
+
+	const int size = 1024;
+	
+	
+	
+	
+	// advection
+	
+	float4 result = advect_lookup(divergence1_in, id.xy);
+	float4 px =	advect_lookup(divergence1_in, float2( id.x+1,id.y ) )  ;
+	float4 nx =	advect_lookup(divergence1_in, float2( id.x-1,id.y ) ) ;
+	float4 py =	advect_lookup(divergence1_in, float2( id.x,id.y+1 ) ) ;
+	float4 ny =	advect_lookup(divergence1_in, float2( id.x,id.y-1 ) )  ;
+	
+	/*
+	float4 result = divergence1_in[ id.xy ];
+	
+	float4 px =	divergence1_in[ float2( id.x+1,id.y ) ] ;
+	float4 nx =	divergence1_in[ float2( id.x-1,id.y ) ] ;
+	float4 py =	divergence1_in[ float2( id.x,id.y+1 ) ] ;
+	float4 ny =	divergence1_in[ float2( id.x,id.y-1 ) ]  ;
+	*/
+	
+	//  // Rule 2 : Disordered Energy diffuses completely :
+	result.b = (nx.b + ny.b + px.b + py.b) / 4.0;
+
+	
+  	 // Rule 3 : Order in the disordered Energy creates Order :
+  	 result.r += (nx.b - px.b) / 4.0;
+  	 result.g += (ny.b - py.b) / 4.0;
+			
+	// Rule 4 : Disorder in the ordered Energy creates Disorder :
+	result.b += ( (nx.r - px.r) + (ny.g - py.g) )  / 4.0;
+	
+	 
+	// mass conservation
+    	result.a += (((nx.r*nx.a)-(px.r*px.a))+((ny.g*ny.a)-(py.g*py.a)))/4.0;
+    
+    	const int boundary = 10;
+    	 if(id.x<boundary||id.y<boundary||id.x<boundary||id.y<boundary)
+    	{
+ 	   	result.r = 0.0;
+  	  	result.g = 0.0;
+  	}
+    	
+    	
+ 	result.r *= 0.999;
+ 	result.g *= 0.999;
+ 	
+ 	//result.g -= result.a / 300.0; 
+ 
+    
+    divergence1_out[id.xy] = result;
+    const float magnif = 20.0;
+    divergence1_display [id.xy] = float4(
+	
+		
+		result.r * magnif + 0.5,
+		result.g * magnif + 0.5,
+		result.b * magnif + 0.5,
+		1.0
+	);    
+}
+
+
+
+/*
 #pragma kernel Divergence2
 
-Texture2D<float4>   divergence2_input;
+RWTexture2D<float4>   workspace;
 
-RWTexture2D<float4> divergence2_output	;
+RWTexture2D<float4> display;
 
 [numthreads(8,8,1)]
 
 void Divergence2 (uint3 id : SV_DispatchThreadID)
 {
 
+	const int size = 1024;
+
+	int xid2 = id.x-1;
+	int yid2 = id.y-1;
 	
-	divergence2_output [id.xy] = float4(
+	float xval2 = (divergence2_input[float2(xid2, id.y)].b ) ;
+	float yval2 = (divergence2_input[float2(id.x, yid2)].a ) ;
 	
-		((divergence2_input[float2(id.x, id.y)].r -0.5)+ (divergence2_input[float2(id.x-1, id.y)].b - 0.5)) + 0.5,
-		((divergence2_input[float2(id.x, id.y)].g -0.5)+ (divergence2_input[float2(id.x, id.y-1)].a - 0.5)) + 0.5,
+	
+	float4 here = workspace[id.xy];
+	
+	
+float herex = (here.r) + xval2);
+float herey = (here.g)+ yval2) ;
+
+	
+	workspace [id.xy] = float4(
+	
+		herex ,
+		herey,
+		here.z,
+		1.0
+	); 
+	
+	
+	display [id.xy] = float4(
+	
 		0.0,
+		herey,
+		herex, 
 		1.0
 	);
+	  
 }
 
-
+*/
 
 
 
 #pragma kernel Advect1
 
-Texture2D<float4>   advect1_input;
+RWTexture2D<float4>   advect1_input;
 
 RWTexture2D<float4> advect1_output	;
 
@@ -212,24 +330,8 @@ RWTexture2D<float4> advect1_output	;
 
 void Advect1 (uint3 id : SV_DispatchThreadID)
 {
-	const int size = 1024;
-	
-	/* velx is r and vely is g */
-	
-	
-	
-	float flowx1 =	advect1_input[ float2( id.x,id.y ) ].r - 0.5;
-	float flowy1 =	advect1_input[ float2( id.x,id.y ) ].g - 0.5;
 
-	const float kt = 50.0;
-	flowx1 *= kt;
-	flowy1 *= kt;
-
-	float2 take = float2(  id.x + flowx1,  id.y + flowy1 );
-	float4 minugs = advect1_input[take];
-	
-	
-	advect1_output[id.xy] = minugs;
+	advect1_output[id.xy] = advect_lookup(advect1_input, id.xy);
 	
 			
 }
@@ -238,7 +340,7 @@ void Advect1 (uint3 id : SV_DispatchThreadID)
 
 #pragma kernel Diffuse1
 
-Texture2D<float4>   diffuse1_input;
+RWTexture2D<float4>   diffuse1_input;
 
 RWTexture2D<float4> diffuse1_output	;
 
@@ -246,12 +348,11 @@ RWTexture2D<float4> diffuse1_output	;
 
 void Diffuse1 (uint3 id : SV_DispatchThreadID)
 {
+	
 	const int size = 1024;
 	
-	/* velx is r and vely is g */
-	
-	float avgx = diffuse1_input[id.xy].r - 0.5;
-	float avgy = diffuse1_input[id.xy].r - 0.5;
+	float avgx = diffuse1_input[id.xy].r ;
+	float avgy = diffuse1_input[id.xy].g ;
 	
 	for(float y = -1.0; y <= 1.0; y+=1.0)
 	{
@@ -261,13 +362,16 @@ void Diffuse1 (uint3 id : SV_DispatchThreadID)
 			{
 				continue;
 			}
-			avgx += diffuse1_input[float2(id.x + x, id.y + y)].r - 0.5;
-			avgy += diffuse1_input[float2(id.x + x, id.y + y)].g - 0.5;
+			
+			
+			
+			avgx += diffuse1_input[float2(id.x + x, id.y + y)].r ;
+			avgy += diffuse1_input[float2(id.x + x, id.y + y)].g ;
 		}
 	}
 	avgx = avgx / 9;
 	avgy = avgy / 9;
-	diffuse1_output[id.xy] = float4(avgx + 0.5, avgy + 0.5, 0.0, 1.0);
+	diffuse1_output[id.xy] = float4(avgx , avgy , 0.0, 1.0);
 			
 }
 
