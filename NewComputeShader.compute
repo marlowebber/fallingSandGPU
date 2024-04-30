@@ -1,4 +1,11 @@
 
+float2 advect_addr(RWTexture2D<float4>   divergence1_in , float2 id )
+{
+
+return id - (divergence1_in[id].xy * divergence1_in[id].z * 10.0);
+}
+
+
 
 #pragma kernel Divergence1
 
@@ -12,20 +19,23 @@ RWTexture2D<float4> divergence1_display;
 
 
 
-
 void Divergence1 (uint3 id : SV_DispatchThreadID)
 {
 
 	const int size = 1024;
 	
+	 
 	
-	float4 here = divergence1_in[id.xy];
-	float4 nbrx = divergence1_in[id.xy + float2(-1,0) ];
-	float4 nbry = divergence1_in[id.xy + float2(0,-1) ];
-	float4 pbrx = divergence1_in[id.xy + float2(1,0) ];
-	float4 pbry = divergence1_in[id.xy + float2(0,1) ];
 	
-	float4 result = here;
+	float2 here_addr = id.xy;
+	float4 here = divergence1_in[id.xy]	;
+	float4 result = divergence1_in[id.xy]	;
+	
+	float4 nbrx = divergence1_in[here_addr + float2(-1,0) ];
+	float4 nbry = divergence1_in[here_addr + float2(0,-1) ];
+	float4 pbrx = divergence1_in[here_addr + float2(1,0) ];
+	float4 pbry = divergence1_in[here_addr + float2(0,1) ];
+	
 	
 	/*
 	
@@ -36,31 +46,37 @@ void Divergence1 (uint3 id : SV_DispatchThreadID)
 	*/
 	
 	const float k = 0.25;
+	const float smoothing = 1.0;
+	const float decay = 0.0;
 	
+	float v2p = ((  here.x - pbrx.x ) + (  here.y  - pbry.y ) - (  here.x  - nbrx.x ) - (  here.y  - nbry.y )) * k;
+	result.z += v2p;
 	
-	result.x += (  here.z  - pbrx.z ) * k ;
-	result.z += (  here.x  - pbrx.x ) * k ;
-	
-	result.x -= (  here.z  - nbrx.z ) * k ;
-	result.z -= (  here.x  - nbrx.x ) * k ;
-	
-	result.y += (  here.z  - pbry.z ) * k ;
-	result.z += (  here.y  - pbry.y ) * k ;
-	
-	result.y -= (  here.z  - nbry.z ) * k ;
-	result.z -= (  here.y  - nbry.y ) * k ;
-	
-	//result.x *= 0.995;
-	//result.y *= 0.995;
-	//result.z += (1.0 - result.z) * 0.005;
+
+	float2 p2v = float2(
+		((  here.z  - pbrx.z ) - (  here.z  - nbrx.z )),
+		((  here.z  - pbry.z ) - (  here.z  - nbry.z ))
+	) * k;
+	result.xy += p2v;
+
 	
 	
 	
+	
+	
+	
+	
+	result.x *= (1.0 - decay);
+	result.y *= (1.0 - decay);
+	result.z += (0.5 - result.z) * decay;
 	
 	float nbravgx = (  nbrx.x  + pbrx.x  ) / 2;
 	float nbravgy = (  nbry.y  + pbry.y  ) / 2;
-	result.x += (nbravgx - result.x) * 0.5;
-	result.y += (nbravgy - result.y) * 0.5;
+	result.x += (nbravgx - result.x) * 0.5 * smoothing;
+	result.y += (nbravgy - result.y) * 0.5 * smoothing;
+	
+	
+	
 	
 	
 	
@@ -69,12 +85,15 @@ void Divergence1 (uint3 id : SV_DispatchThreadID)
     
     divergence1_out[id.xy] = result;
     const float magnif = 20.0;
+    
+    float velt = abs(result.r) + abs(result.g) * magnif;
+    
     divergence1_display [id.xy] = float4(
 	
 		
-		result.r * magnif + 0.5,
-		result.g * magnif + 0.5,
-		result.b * magnif + 0.5,
+		result.x,
+		result.y,
+		result.z,
 		1.0
 	);    
 }

@@ -274,9 +274,9 @@ public class deepseaunity3 : MonoBehaviour
                 if (Mathf.Sqrt( (fx*fx) + (fy*fy)  )  < bloopsize/2)
                 {
                     Color moo = cstex_1.GetPixel(this.g_size/2 + x, this.g_size/2 + y);
-                    moo.r = 0.0f;//finfx;
+                    moo.r = 1.0f;//finfx;
                     moo.g = 0.0f;//finfy;
-                    moo.b = 1.0f;
+                    moo.b = 0.0f;
                     moo.a = 0.0f;
                     cstex_1.SetPixel(this.g_size/2 + x, this.g_size/2 + y, moo);
                 }
