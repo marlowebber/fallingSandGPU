@@ -14,7 +14,7 @@ public class deepseaunity3 : MonoBehaviour
     public RenderTexture _renderTextureOutput1;
     public RenderTexture _renderTextureOutput2;
     public RenderTexture _renderTextureOutput3;
-
+    public RenderTexture _renderTextureOutput4;
 
 
     public ComputeShader _computeShader;
@@ -58,6 +58,14 @@ public class deepseaunity3 : MonoBehaviour
         _renderTextureOutput3.Create();
 
    
+        _renderTextureOutput4 = new RenderTexture(this.g_size, this.g_size, 24, RenderTextureFormat.ARGBFloat);
+        _renderTextureOutput4.filterMode = FilterMode.Point;
+        _renderTextureOutput4.enableRandomWrite = true;
+        _renderTextureOutput4.Create();
+
+   
+
+   
 
         this.bdg= new GameObject();
         this.bdg.transform.SetParent(this.canvas.transform);
@@ -89,6 +97,7 @@ public class deepseaunity3 : MonoBehaviour
         Graphics.Blit( cstex_1, _renderTextureOutput1);
         Graphics.Blit( cstex_1, _renderTextureOutput2);
         Graphics.Blit( cstex_1, _renderTextureOutput3);
+        Graphics.Blit( cstex_1, _renderTextureOutput4);
 
 
         _computeShader.SetFloat("_Resolution", _renderTextureOutput1.width);
@@ -129,14 +138,16 @@ public class deepseaunity3 : MonoBehaviour
         _computeShader.SetTexture(divergence1_kernel, "divergence1_out",  _renderTextureOutput1);
         _computeShader.SetTexture(divergence1_kernel, "divergence1_in",  _renderTextureOutput2);
         _computeShader.SetTexture(divergence1_kernel, "divergence1_display", _renderTextureOutput3);
+        _computeShader.SetTexture(divergence1_kernel, "divergence1_deltas", _renderTextureOutput4);
             _computeShader.GetKernelThreadGroupSizes(divergence1_kernel,   out  divergence1_xgroupsize, out  divergence1_ygroupsize, out  divergence1_zgroupsize);
 
 
-        //      this.divergence2_kernel = _computeShader.FindKernel("Divergence2");
-        // _computeShader.SetTexture(divergence2_kernel, "divergence2_input",  _renderTextureOutput1);
-        // _computeShader.SetTexture(divergence2_kernel, "divergence2_output", _renderTextureOutput2);
-        // _computeShader.SetTexture(divergence2_kernel, "divergence2_display", this.cstex_1);
-        //     _computeShader.GetKernelThreadGroupSizes(divergence2_kernel,   out  divergence2_xgroupsize, out  divergence2_ygroupsize, out  divergence2_zgroupsize);
+             this.divergence2_kernel = _computeShader.FindKernel("Divergence2");
+        _computeShader.SetTexture(divergence2_kernel, "divergence1_input",  _renderTextureOutput1);
+        _computeShader.SetTexture(divergence2_kernel, "divergence1_output", _renderTextureOutput2);
+        _computeShader.SetTexture(divergence2_kernel, "divergence1_display", _renderTextureOutput3);
+        _computeShader.SetTexture(divergence2_kernel, "divergence1_deltas", _renderTextureOutput4);
+            _computeShader.GetKernelThreadGroupSizes(divergence2_kernel,   out  divergence2_xgroupsize, out  divergence2_ygroupsize, out  divergence2_zgroupsize);
 
 
         //      this.advect1_kernel = _computeShader.FindKernel("Advect1");
@@ -204,6 +215,9 @@ public class deepseaunity3 : MonoBehaviour
         _computeShader.SetTexture(divergence1_kernel, "divergence1_out",  _renderTextureOutput1);
         _computeShader.SetTexture(divergence1_kernel, "divergence1_in",  _renderTextureOutput2);
 
+        _computeShader.SetTexture(divergence2_kernel, "divergence1_out",  _renderTextureOutput1);
+        _computeShader.SetTexture(divergence2_kernel, "divergence1_in",  _renderTextureOutput2);
+
         }
         else
         {
@@ -211,12 +225,19 @@ public class deepseaunity3 : MonoBehaviour
 
         _computeShader.SetTexture(divergence1_kernel, "divergence1_in",  _renderTextureOutput1);
         _computeShader.SetTexture(divergence1_kernel, "divergence1_out",  _renderTextureOutput2);
+
+        _computeShader.SetTexture(divergence2_kernel, "divergence1_in",  _renderTextureOutput1);
+        _computeShader.SetTexture(divergence2_kernel, "divergence1_out",  _renderTextureOutput2);
+        
         }
 
 
             _computeShader.Dispatch(divergence1_kernel, _renderTextureOutput1.width / (int) this.divergence1_xgroupsize, _renderTextureOutput1.height / (int) this.divergence1_ygroupsize,
                 1);
 
+
+ _computeShader.Dispatch(divergence2_kernel, _renderTextureOutput1.width / (int) this.divergence1_xgroupsize, _renderTextureOutput1.height / (int) this.divergence1_ygroupsize,
+                1);
 
 
 
@@ -274,9 +295,9 @@ public class deepseaunity3 : MonoBehaviour
                 if (Mathf.Sqrt( (fx*fx) + (fy*fy)  )  < bloopsize/2)
                 {
                     Color moo = cstex_1.GetPixel(this.g_size/2 + x, this.g_size/2 + y);
-                    moo.r = 1.0f;//finfx;
+                    moo.r = 0.0f;//finfx;
                     moo.g = 0.0f;//finfy;
-                    moo.b = 0.0f;
+                    moo.b = 1.0f;
                     moo.a = 0.0f;
                     cstex_1.SetPixel(this.g_size/2 + x, this.g_size/2 + y, moo);
                 }

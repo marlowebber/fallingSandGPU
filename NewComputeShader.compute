@@ -7,13 +7,40 @@ return id - (divergence1_in[id].xy * divergence1_in[id].z * 10.0);
 
 
 
+
+#pragma kernel Divergence2
+
+
+RWTexture2D<float4>  divergence1_in;
+RWTexture2D<float4> divergence1_out;
+RWTexture2D<float4> divergence1_display;
+RWTexture2D<float4> divergence1_deltas;
+
+[numthreads(8,8,1)]
+
+
+void Divergence2 (uint3 id : SV_DispatchThreadID)
+{
+
+
+	float4 result = divergence1_in[id.xy]	;
+	
+	
+	result.x += divergence1_deltas[id.xy + float2(-1,0)];
+	result.y += divergence1_deltas[id.xy + float2(0,-1)];
+	result.z += divergence1_deltas[id.xy + float2(-1,0)].z +  divergence1_deltas[id.xy + float2(0,-1)].w;
+	
+	divergence1_out[id.xy] = result;
+	
+ 	divergence1_display[id.xy] = float4(result.x + 0.5, result.y + 0.5, result.z+0.5, 1.0);
+ 	
+
+}
+
+
+
 #pragma kernel Divergence1
 
-RWTexture2D<float4>   divergence1_in;
-
-RWTexture2D<float4>   divergence1_out;
-
-RWTexture2D<float4> divergence1_display;
 
 [numthreads(8,8,1)]
 
@@ -23,79 +50,121 @@ void Divergence1 (uint3 id : SV_DispatchThreadID)
 {
 
 	const int size = 1024;
+	const float k = 0.125;
+	const float smoothing = 1.0;
+	const float decay = 0.0;
 	
-	 
 	
-	
+	// This simulation compares 2 cardinal neighbours and writes to the tile and its neighbours.
 	float2 here_addr = id.xy;
 	float4 here = divergence1_in[id.xy]	;
 	float4 result = divergence1_in[id.xy]	;
+	float4 delta = float4(0,0,0,0);
+	float4 pbrx = divergence1_in[here_addr + float2(1,0) ];
+	float4 pbry = divergence1_in[here_addr + float2(0,1) ];
 	
+	float vdiffx = (  here.x - pbrx.x );
+	float vcontribx = vdiffx * k;
+	result.z -= vcontribx;
+	delta.z = vcontribx;
+
+	float vdiffy = (  here.y - pbry.y );
+	float vcontriby = vdiffy * k;
+	
+	result.z -= vcontriby;
+	delta.w = vcontriby;
+	
+	float pdiffx = here.z  - pbrx.z;
+	float pcontribx = pdiffx * k;
+	result.x -= pcontribx;
+	delta.x = pcontribx;
+	
+	float pdiffy = here.z  - pbry.z;
+	float pcontriby = pdiffy * k;
+	result.y -= pcontriby;
+	delta.y = pcontriby;
+	
+	result.x *= (1.0 - decay);
+	result.y *= (1.0 - decay);
+	result.z += (0.5 - result.z) * decay;
+	//float nbravgx = (  nbrx.x  + pbrx.x  ) / 2;
+	//float nbravgy = (  nbry.y  + pbry.y  ) / 2;
+	//result.x += (nbravgx - result.x) * 0.5 * smoothing;
+	//result.y += (nbravgy - result.y) * 0.5 * smoothing;
+	
+ 	divergence1_out[id.xy] = result;
+ 	divergence1_deltas[id.xy] = delta;
+ 	
+	
+	
+	
+	
+	 
+	
+	/*
+	// This simulation compares 4 cardinal neighbours and writes to a single tile.
+	// it is complete and works but suffers from ripple effect that builds up over time.
+	float2 here_addr = id.xy;
+	float4 here = divergence1_in[id.xy]	;
+	float4 result = divergence1_in[id.xy]	;
 	float4 nbrx = divergence1_in[here_addr + float2(-1,0) ];
 	float4 nbry = divergence1_in[here_addr + float2(0,-1) ];
 	float4 pbrx = divergence1_in[here_addr + float2(1,0) ];
 	float4 pbry = divergence1_in[here_addr + float2(0,1) ];
-	
-	
-	/*
-	
-	r = vel x
-	g = vel y
-	b = press
-	
-	*/
-	
-	const float k = 0.25;
-	const float smoothing = 1.0;
-	const float decay = 0.0;
-	
 	float v2p = ((  here.x - pbrx.x ) + (  here.y  - pbry.y ) - (  here.x  - nbrx.x ) - (  here.y  - nbry.y )) * k;
 	result.z += v2p;
-	
-
 	float2 p2v = float2(
 		((  here.z  - pbrx.z ) - (  here.z  - nbrx.z )),
 		((  here.z  - pbry.z ) - (  here.z  - nbry.z ))
 	) * k;
 	result.xy += p2v;
-
-	
-	
-	
-	
-	
-	
-	
 	result.x *= (1.0 - decay);
 	result.y *= (1.0 - decay);
 	result.z += (0.5 - result.z) * decay;
-	
 	float nbravgx = (  nbrx.x  + pbrx.x  ) / 2;
 	float nbravgy = (  nbry.y  + pbry.y  ) / 2;
 	result.x += (nbravgx - result.x) * 0.5 * smoothing;
 	result.y += (nbravgy - result.y) * 0.5 * smoothing;
+	*/
 	
 	
 	
-	
-	
-	
-
-	
-    
-    divergence1_out[id.xy] = result;
-    const float magnif = 20.0;
-    
-    float velt = abs(result.r) + abs(result.g) * magnif;
-    
-    divergence1_display [id.xy] = float4(
-	
-		
+	/*
+	// this simulatin compares all 8 neighbours and writes to a single tile.
+	// it is incomplete and does not work yet.
+	float4 result = divergence1_in[id.xy];
+	float4 here = divergence1_in[id.xy]	;
+	float nbravgx = result.x;
+	float nbravgy = result.y;
+	float2 pushes = float2(0,0);
+	float inflow = 0.0;
+	for(int i = -1; i < 2; i++)
+	{
+		for(int j = -1; j < 2; j++)
+		{
+			if (i==0||j==0){continue;}
+			float angle = atan2(j,i);
+			float cosa = cos(angle);
+			float sina = sin(angle);
+			float2 nbr_addr = id.xy + float2(i,j);
+			float4 nbr = divergence1_in[nbr_addr];
+			float pdif = (here.z - nbr.z) * 0.5;
+			pushes -= float2( cosa * pdif, sina * pdif);
+			inflow +=   cosa * (here.x - nbr.x)* 0.5 , sina * (here.y - nbr.y)* 0.5; 
+		}
+	}
+	result.z += inflow;
+	result.xy += pushes;
+ 	divergence1_out[id.xy] = result;
+  	const float magnif = 20.0;
+   	float velt = abs(result.r) + abs(result.g) * magnif;
+    	divergence1_display [id.xy] = float4(
 		result.x,
 		result.y,
 		result.z,
 		1.0
 	);    
+	*/
 }
 
 
