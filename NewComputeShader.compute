@@ -5,6 +5,10 @@ RWTexture2D<float4> particle_input;
 RWTexture2D<float4> particle_output	;
 RWTexture2D<float4> particle_display	;
 
+
+
+RWTexture2D<float4> rigidbody_information	;
+
 [numthreads(8,8,1)]
 
 void Particle (uint3 id : SV_DispatchThreadID)
@@ -32,20 +36,36 @@ void Particle (uint3 id : SV_DispatchThreadID)
 
 
 	float4 here = particle_input[id.xy];
+
 	float4 result = here;
 	
 	//backward advection
 	result = particle_input[id.xy - (here.xy * 3.0  )];
+
+if (here.a == 0.0){result.x = rigidbody_information[float2(0,0)].r; result.y = rigidbody_information[float2(0,0)].g;}
+
+
 	
 	float4 pbry = particle_input[id.xy + float2(0,1)];
 	float4 nbry = particle_input[id.xy + float2(0,-1)];
 	float4 nbrx = particle_input[id.xy + float2(-1,0)];
 	float4 pbrx = particle_input[id.xy + float2(1,0)];
 
-	float div = ((pbrx.x - nbrx.x) + (pbry.y - nbry.y)) * 0.5;
+	if (pbry.a == 0.0) {pbry = result;}
+	if (nbry.a == 0.0) {nbry = result;}
+	if (pbrx.a == 0.0) {pbrx = result;}
+	if (nbrx.a == 0.0) {nbrx = result;}
+
+	float dvx = (pbrx.x - nbrx.x);
+	float dvy = (pbry.y - nbry.y);
+	float dpx = (pbrx.z - nbrx.z);
+	float dpy = (pbry.z - nbry.z);
+	float div = (dvx + dvy) * 0.5;
+
 	result.z = ( pbrx.z + pbry.z + nbrx.z + nbry.z - div ) * 0.25;
-	result.x -= (pbrx.z - nbrx.z) * 0.5;
-	result.y -= (pbry.z - nbry.z) * 0.5;
+	result.x -= dpx * 0.5;
+	result.y -= dpy * 0.5;
+
 	result.a = 1.0;
 	particle_output[id.xy] = result;
 

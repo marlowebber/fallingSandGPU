@@ -47,6 +47,7 @@ public class deepseaunity3 : MonoBehaviour
     public Image bdi;
     public GameObject bdg;
     public Texture2D cstex_1 ;
+    public Texture2D cstex_2 ;
     // public List<Texture2D> textures;
     public Texture2D tex_white_square;
     public Sprite sprite_white_square;
@@ -85,7 +86,7 @@ public class deepseaunity3 : MonoBehaviour
         _renderTextureOutput3.Create();
 
    
-        _renderTextureOutput4 = new RenderTexture(this.g_size, this.g_size, 24, RenderTextureFormat.ARGBFloat);
+        _renderTextureOutput4 = new RenderTexture(1, 1, 24, RenderTextureFormat.ARGBFloat);
         _renderTextureOutput4.filterMode = FilterMode.Point;
         _renderTextureOutput4.enableRandomWrite = true;
         _renderTextureOutput4.Create();
@@ -104,9 +105,9 @@ public class deepseaunity3 : MonoBehaviour
 
         this. cstex_1 = new Texture2D(this.g_size, this.g_size, TextureFormat.RGBAFloat, -1, false);
 
+        this. cstex_2 = new Texture2D(1, 1, TextureFormat.RGBAFloat, -1, false);
 
 
-        // this. cstex_2 = new Texture2D(this.g_size, this.g_size);
         this.bds = Sprite.Create(this.cstex_1, new Rect(0.0f, 0.0f, this.g_size, this.g_size), new Vector2(this.g_size/2, this.g_size/2), 1.0f);
         this.bdi.sprite = this.bds;
 
@@ -133,7 +134,7 @@ public class deepseaunity3 : MonoBehaviour
         Graphics.Blit( cstex_1, _renderTextureOutput1);
         Graphics.Blit( cstex_1, _renderTextureOutput2);
         Graphics.Blit( cstex_1, _renderTextureOutput3);
-        Graphics.Blit( cstex_1, _renderTextureOutput4);
+        // Graphics.Blit( cstex_1, _renderTextureOutput4);
 
 
         _computeShader.SetFloat("_Resolution", _renderTextureOutput1.width);
@@ -191,6 +192,7 @@ public class deepseaunity3 : MonoBehaviour
         _computeShader.SetFloat( "particle_rand",  (UnityEngine.Random.value - 0.5f) * 2.0f);
         _computeShader.SetTexture(divergence1_kernel, "particle_input",  _renderTextureOutput1);
         _computeShader.SetTexture(divergence1_kernel, "particle_output",  _renderTextureOutput2);
+        _computeShader.SetTexture(divergence1_kernel, "rigidbody_information",  _renderTextureOutput4);
         // _computeShader.SetTexture(divergence1_kernel, "ResultDisplay", _renderTextureOutput3);
         // _computeShader.SetTexture(divergence1_kernel, "divergence1_deltas", _renderTextureOutput4);
             _computeShader.GetKernelThreadGroupSizes(divergence1_kernel,   out  divergence1_xgroupsize, out  divergence1_ygroupsize, out  divergence1_zgroupsize);
@@ -294,6 +296,19 @@ public class deepseaunity3 : MonoBehaviour
         
         // }
 
+
+
+
+
+		const float k = 0.01f;
+
+
+        cstex_2.SetPixel(0, 0, new Color(this.rb.velocity.x * k, this.rb.velocity.y * k, 0.0f, 1.0f));
+        cstex_2.Apply();
+        Graphics.Blit( cstex_2, _renderTextureOutput4);
+
+
+
        
 
  _computeShader.Dispatch(divergence1_kernel, _renderTextureOutput1.width / (int) this.divergence1_xgroupsize, _renderTextureOutput1.height / (int) this.divergence1_ygroupsize,
@@ -385,13 +400,25 @@ public class deepseaunity3 : MonoBehaviour
 
 Vector3 mp = Input.mousePosition;
 
+Vector3 pdif =mp - this.mouse_go.transform.position ; 
 
-this.mouse_go.transform.position = mp;
+this.rb.AddForce( pdif );
 
 
 
 
         }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -425,9 +452,9 @@ this.mouse_go.transform.position = mp;
                 {
 
  Color moo = cstex_1.GetPixel(herex, herey);
-                    moo.r = -1.0f;//finfx;
-                    moo.g = 0.0f;//finfy;
-                    moo.b = 0.0f;
+                    // moo.r = -1.0f;//finfx;
+                    // moo.g = 0.0f;//finfy;
+                    // moo.b = 0.0f;
                     moo.a = 0.0f;
                     cstex_1.SetPixel(herex, herey, moo);
 
