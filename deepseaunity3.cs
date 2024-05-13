@@ -9,6 +9,29 @@ using UnityEngine.UI;
 using UnityEngine.Profiling;
 using TMPro;
 
+
+public static class Content
+{
+
+
+public static string [] test_sub = new string [] 
+{
+    "                 =====          ",
+    "                 =   =          ",
+    "==================   ========== ",
+    "=                             ==",
+    "=                              =",
+    "=                             ==",
+    "=============================== ",
+
+};
+
+
+}
+
+
+
+
 public class deepseaunity3 : MonoBehaviour
 {
     public RenderTexture _renderTextureOutput1;
@@ -27,8 +50,12 @@ public class deepseaunity3 : MonoBehaviour
     // public List<Texture2D> textures;
     public Texture2D tex_white_square;
     public Sprite sprite_white_square;
+
     public GameObject mouse_go;
     public Image mouse_indicator;
+    public Rigidbody2D rb;
+    public BoxCollider2D col;
+
     public bool prepared;
     public int g_size;
 
@@ -89,7 +116,16 @@ public class deepseaunity3 : MonoBehaviour
             {
                 int addr_here = (y * this.g_size) + x;
 
-                cstex_1.SetPixel(x, y, new Color(UnityEngine.Random.value*0.001f, UnityEngine.Random.value*0.001f, UnityEngine.Random.value*0.001f, 0.0f));
+
+                float bval = 0.0f;
+                if (UnityEngine.Random.value < 0.5f)
+                {
+                    bval  = 1.0f;
+                }
+
+
+                cstex_1.SetPixel(x, y, new Color(UnityEngine.Random.value * 0.1f, 0.0f, bval, 0.0f));
+             
          
             }
         }
@@ -124,30 +160,47 @@ public class deepseaunity3 : MonoBehaviour
         // this.textures = new List<Texture2D> { this.cstex_1} ;
         this.tex_white_square = new Texture2D(1, 1);
         this.sprite_white_square = Sprite.Create(tex_white_square, new Rect(0.0f, 0.0f, this.tex_white_square.width, this.tex_white_square.height), new Vector2(this.tex_white_square.width/2, this.tex_white_square.height/2), 1.0f);
+     
         this.mouse_go = new GameObject();
         this.mouse_go.transform.SetParent(this.canvas.transform);
         this.mouse_indicator = this.mouse_go.AddComponent<Image>();
         this.mouse_indicator.sprite = this.sprite_white_square;
-        this.mouse_indicator.transform.localScale  = new Vector3(1.0f, 0.1f, 1.0f);
+        // this.mouse_indicator.transform.localScale  = new Vector3(1.0f, 1.0f, 1.0f);
+        this.col = this.mouse_go.AddComponent<BoxCollider2D>();
+        this.rb = this.mouse_go.AddComponent<Rigidbody2D>();
+        this.rb.transform.position = new Vector3(100.0f, 100.0f, 0.0f);
+     
+     
+     
+     
         this.prepared = true;
 
  
  
 
-             this.divergence1_kernel = _computeShader.FindKernel("Divergence1");
-        _computeShader.SetTexture(divergence1_kernel, "divergence1_out",  _renderTextureOutput1);
-        _computeShader.SetTexture(divergence1_kernel, "divergence1_in",  _renderTextureOutput2);
-        _computeShader.SetTexture(divergence1_kernel, "divergence1_display", _renderTextureOutput3);
-        _computeShader.SetTexture(divergence1_kernel, "divergence1_deltas", _renderTextureOutput4);
+             this.divergence1_kernel = _computeShader.FindKernel("Particle");
+
+
+        // float [] chumb = new float[4];
+        // for(int i = 0; i < 4; i++)
+        // {
+        //     chumb[i] = (UnityEngine.Random.value - 0.5f) * 2.0f;
+        // }
+
+        _computeShader.SetFloat( "particle_rand",  (UnityEngine.Random.value - 0.5f) * 2.0f);
+        _computeShader.SetTexture(divergence1_kernel, "particle_input",  _renderTextureOutput1);
+        _computeShader.SetTexture(divergence1_kernel, "particle_output",  _renderTextureOutput2);
+        // _computeShader.SetTexture(divergence1_kernel, "ResultDisplay", _renderTextureOutput3);
+        // _computeShader.SetTexture(divergence1_kernel, "divergence1_deltas", _renderTextureOutput4);
             _computeShader.GetKernelThreadGroupSizes(divergence1_kernel,   out  divergence1_xgroupsize, out  divergence1_ygroupsize, out  divergence1_zgroupsize);
 
 
-             this.divergence2_kernel = _computeShader.FindKernel("Divergence2");
-        _computeShader.SetTexture(divergence2_kernel, "divergence1_input",  _renderTextureOutput1);
-        _computeShader.SetTexture(divergence2_kernel, "divergence1_output", _renderTextureOutput2);
-        _computeShader.SetTexture(divergence2_kernel, "divergence1_display", _renderTextureOutput3);
-        _computeShader.SetTexture(divergence2_kernel, "divergence1_deltas", _renderTextureOutput4);
-            _computeShader.GetKernelThreadGroupSizes(divergence2_kernel,   out  divergence2_xgroupsize, out  divergence2_ygroupsize, out  divergence2_zgroupsize);
+        //      this.divergence2_kernel = _computeShader.FindKernel("Divergence2");
+        // _computeShader.SetTexture(divergence2_kernel, "divergence1_input",  _renderTextureOutput1);
+        // _computeShader.SetTexture(divergence2_kernel, "divergence1_output", _renderTextureOutput2);
+        // _computeShader.SetTexture(divergence2_kernel, "divergence1_display", _renderTextureOutput3);
+        // _computeShader.SetTexture(divergence2_kernel, "divergence1_deltas", _renderTextureOutput4);
+        //     _computeShader.GetKernelThreadGroupSizes(divergence2_kernel,   out  divergence2_xgroupsize, out  divergence2_ygroupsize, out  divergence2_zgroupsize);
 
 
         //      this.advect1_kernel = _computeShader.FindKernel("Advect1");
@@ -208,40 +261,48 @@ public class deepseaunity3 : MonoBehaviour
         if (this.prepared)
         {
 
+
+            //  _computeShader.SetFloat( "falling_rand", (UnityEngine.Random.value-0.5f) * 2.0f);
+
+            // _computeShader.Dispatch(divergence1_kernel, _renderTextureOutput1.width / (int) this.divergence1_xgroupsize, _renderTextureOutput1.height / (int) this.divergence1_ygroupsize,
+            //     1);
+
+
+
+
             count++;
 
         if (count % 2 == 0)
         {
-        _computeShader.SetTexture(divergence1_kernel, "divergence1_out",  _renderTextureOutput1);
-        _computeShader.SetTexture(divergence1_kernel, "divergence1_in",  _renderTextureOutput2);
+        _computeShader.SetTexture(divergence1_kernel, "particle_output",  _renderTextureOutput1);
+        _computeShader.SetTexture(divergence1_kernel, "particle_input",  _renderTextureOutput2);
 
-        _computeShader.SetTexture(divergence2_kernel, "divergence1_out",  _renderTextureOutput1);
-        _computeShader.SetTexture(divergence2_kernel, "divergence1_in",  _renderTextureOutput2);
+        // _computeShader.SetTexture(divergence2_kernel, "ResultOutput",  _renderTextureOutput1);
+        // _computeShader.SetTexture(divergence2_kernel, "ResultInput",  _renderTextureOutput2);
 
         }
         else
         {
             
 
-        _computeShader.SetTexture(divergence1_kernel, "divergence1_in",  _renderTextureOutput1);
-        _computeShader.SetTexture(divergence1_kernel, "divergence1_out",  _renderTextureOutput2);
+        _computeShader.SetTexture(divergence1_kernel, "particle_input",  _renderTextureOutput1);
+        _computeShader.SetTexture(divergence1_kernel, "particle_output",  _renderTextureOutput2);
 
-        _computeShader.SetTexture(divergence2_kernel, "divergence1_in",  _renderTextureOutput1);
-        _computeShader.SetTexture(divergence2_kernel, "divergence1_out",  _renderTextureOutput2);
+        // _computeShader.SetTexture(divergence2_kernel, "ResultInput",  _renderTextureOutput1);
+        // _computeShader.SetTexture(divergence2_kernel, "ResultOutput",  _renderTextureOutput2);
         
         }
 
+       
 
-            _computeShader.Dispatch(divergence1_kernel, _renderTextureOutput1.width / (int) this.divergence1_xgroupsize, _renderTextureOutput1.height / (int) this.divergence1_ygroupsize,
+ _computeShader.Dispatch(divergence1_kernel, _renderTextureOutput1.width / (int) this.divergence1_xgroupsize, _renderTextureOutput1.height / (int) this.divergence1_ygroupsize,
                 1);
 
 
- _computeShader.Dispatch(divergence2_kernel, _renderTextureOutput1.width / (int) this.divergence1_xgroupsize, _renderTextureOutput1.height / (int) this.divergence1_ygroupsize,
-                1);
 
+        // Graphics.Blit( _renderTextureOutput2, _renderTextureOutput1);
 
-
-            ToTexture2D( this._renderTextureOutput3, this.cstex_1);
+            ToTexture2D( this._renderTextureOutput1, this.cstex_1);
 
 
 
@@ -295,9 +356,9 @@ public class deepseaunity3 : MonoBehaviour
                 if (Mathf.Sqrt( (fx*fx) + (fy*fy)  )  < bloopsize/2)
                 {
                     Color moo = cstex_1.GetPixel(this.g_size/2 + x, this.g_size/2 + y);
-                    moo.r = 0.0f;//finfx;
+                    moo.r = 1.0f;//finfx;
                     moo.g = 0.0f;//finfy;
-                    moo.b = 1.0f;
+                    moo.b = 0.0f;
                     moo.a = 0.0f;
                     cstex_1.SetPixel(this.g_size/2 + x, this.g_size/2 + y, moo);
                 }
