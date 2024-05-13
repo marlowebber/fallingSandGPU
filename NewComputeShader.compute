@@ -24,14 +24,17 @@ void Particle (uint3 id : SV_DispatchThreadID)
 
 
 	float4 here = particle_input[id.xy];
-	float4 advect_here = particle_input[id.xy - here.xy];
+	float4 result = here;
+	
+	//backward advection
+	result = particle_input[id.xy - (here.xy * 3.0  )];
+	
 
 	float4 pbry = particle_input[id.xy + float2(0,1)];
 	float4 nbry = particle_input[id.xy + float2(0,-1)];
 	float4 nbrx = particle_input[id.xy + float2(-1,0)];
 	float4 pbrx = particle_input[id.xy + float2(1,0)];
 
-	float4 result = advect_here;
 
 	float div = ((pbrx.x - nbrx.x) + (pbry.y - nbry.y)) * 0.5;
 
@@ -46,6 +49,20 @@ void Particle (uint3 id : SV_DispatchThreadID)
 
 
 	particle_output[id.xy] = result;
+
+
+
+
+
+	// forward advection	
+	//float2 vel = result.xy;
+	//float4 there = particle_input[id.xy + (vel * 10.0 )];
+	//float4 avg = (result + there) * 0.5;
+	//particle_output[id.xy] = avg;
+	//particle_output[id.xy + vel] = avg;
+
+
+
 
 
 }

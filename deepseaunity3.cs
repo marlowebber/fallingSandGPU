@@ -168,7 +168,8 @@ public class deepseaunity3 : MonoBehaviour
         // this.mouse_indicator.transform.localScale  = new Vector3(1.0f, 1.0f, 1.0f);
         this.col = this.mouse_go.AddComponent<BoxCollider2D>();
         this.rb = this.mouse_go.AddComponent<Rigidbody2D>();
-        this.rb.transform.position = new Vector3(100.0f, 100.0f, 0.0f);
+        this.rb.gravityScale = 0.0f;
+        this.rb.transform.position = new Vector3(200.0f, 200.0f, 0.0f);
      
      
      
@@ -340,7 +341,7 @@ public class deepseaunity3 : MonoBehaviour
             if (Input.GetKey(KeyCode.Space))
             {
 
-            ToTexture2D( this._renderTextureOutput1, this.cstex_1);
+            // ToTexture2D( this._renderTextureOutput1, this.cstex_1);
 
 
                 const int bloopsize = 100;
@@ -356,7 +357,7 @@ public class deepseaunity3 : MonoBehaviour
                 if (Mathf.Sqrt( (fx*fx) + (fy*fy)  )  < bloopsize/2)
                 {
                     Color moo = cstex_1.GetPixel(this.g_size/2 + x, this.g_size/2 + y);
-                    moo.r = 1.0f;//finfx;
+                    moo.r = -1.0f;//finfx;
                     moo.g = 0.0f;//finfy;
                     moo.b = 0.0f;
                     moo.a = 0.0f;
@@ -369,6 +370,34 @@ public class deepseaunity3 : MonoBehaviour
         cstex_1.Apply();
         Graphics.Blit(this.cstex_1, this._renderTextureOutput1);
             }
+
+
+
+
+
+
+
+
+            // find out where the object is on the fluid and exchange momentum between them.
+
+            if (Input.GetButtonDown("Fire1"))
+        {
+            Vector3 mousePos = Input.mousePosition;
+            
+              Color moo = cstex_1.GetPixel((int)mousePos.x, (int)mousePos.y);
+
+              Debug.Log(moo);
+               rb.AddForce(new Vector3(moo.r* -1000.0f, moo.g*-1000.0f, 0.0f));
+
+
+        }
+
+
+
+
+
+
+
 
 
         }
