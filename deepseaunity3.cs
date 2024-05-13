@@ -124,7 +124,7 @@ public class deepseaunity3 : MonoBehaviour
                 }
 
 
-                cstex_1.SetPixel(x, y, new Color(UnityEngine.Random.value * 0.1f, 0.0f, bval, 0.0f));
+                cstex_1.SetPixel(x, y, new Color(UnityEngine.Random.value * 0.1f, 0.0f, bval, 1.0f));
              
          
             }
@@ -271,28 +271,28 @@ public class deepseaunity3 : MonoBehaviour
 
 
 
-            count++;
+        //     count++;
 
-        if (count % 2 == 0)
-        {
-        _computeShader.SetTexture(divergence1_kernel, "particle_output",  _renderTextureOutput1);
-        _computeShader.SetTexture(divergence1_kernel, "particle_input",  _renderTextureOutput2);
+        // if (count % 2 == 0)
+        // {
+        // _computeShader.SetTexture(divergence1_kernel, "particle_output",  _renderTextureOutput1);
+        // _computeShader.SetTexture(divergence1_kernel, "particle_input",  _renderTextureOutput2);
 
-        // _computeShader.SetTexture(divergence2_kernel, "ResultOutput",  _renderTextureOutput1);
-        // _computeShader.SetTexture(divergence2_kernel, "ResultInput",  _renderTextureOutput2);
+        // // _computeShader.SetTexture(divergence2_kernel, "ResultOutput",  _renderTextureOutput1);
+        // // _computeShader.SetTexture(divergence2_kernel, "ResultInput",  _renderTextureOutput2);
 
-        }
-        else
-        {
+        // }
+        // else
+        // {
             
 
-        _computeShader.SetTexture(divergence1_kernel, "particle_input",  _renderTextureOutput1);
-        _computeShader.SetTexture(divergence1_kernel, "particle_output",  _renderTextureOutput2);
+        // _computeShader.SetTexture(divergence1_kernel, "particle_input",  _renderTextureOutput1);
+        // _computeShader.SetTexture(divergence1_kernel, "particle_output",  _renderTextureOutput2);
 
-        // _computeShader.SetTexture(divergence2_kernel, "ResultInput",  _renderTextureOutput1);
-        // _computeShader.SetTexture(divergence2_kernel, "ResultOutput",  _renderTextureOutput2);
+        // // _computeShader.SetTexture(divergence2_kernel, "ResultInput",  _renderTextureOutput1);
+        // // _computeShader.SetTexture(divergence2_kernel, "ResultOutput",  _renderTextureOutput2);
         
-        }
+        // }
 
        
 
@@ -303,7 +303,7 @@ public class deepseaunity3 : MonoBehaviour
 
         // Graphics.Blit( _renderTextureOutput2, _renderTextureOutput1);
 
-            ToTexture2D( this._renderTextureOutput1, this.cstex_1);
+            ToTexture2D( this._renderTextureOutput2, this.cstex_1);
 
 
 
@@ -336,61 +336,116 @@ public class deepseaunity3 : MonoBehaviour
 
 
 
-            float finfx=(UnityEngine.Random.value-0.5f) * 2.0f;
-            float finfy=(UnityEngine.Random.value-0.5f) * 2.0f;
-            if (Input.GetKey(KeyCode.Space))
-            {
+//             float finfx=(UnityEngine.Random.value-0.5f) * 2.0f;
+//             float finfy=(UnityEngine.Random.value-0.5f) * 2.0f;
+//             if (Input.GetKey(KeyCode.Space))
+//             {
 
-            // ToTexture2D( this._renderTextureOutput1, this.cstex_1);
+//             // ToTexture2D( this._renderTextureOutput1, this.cstex_1);
 
 
-                const int bloopsize = 100;
- for(int y = -bloopsize/2; y < bloopsize/2; y++)
-        {
-            for(int x = -bloopsize/2; x < bloopsize/2; x++)
-            {
-                // int addr_here = (100 * this.g_size)  + 100 + (y * this.g_size) + x;
+//                 const int bloopsize = 100;
+//  for(int y = -bloopsize/2; y < bloopsize/2; y++)
+//         {
+//             for(int x = -bloopsize/2; x < bloopsize/2; x++)
+//             {
+//                 // int addr_here = (100 * this.g_size)  + 100 + (y * this.g_size) + x;
 
-                float fx = (float)x;
-                float fy = (float)y;
+//                 float fx = (float)x;
+//                 float fy = (float)y;
 
-                if (Mathf.Sqrt( (fx*fx) + (fy*fy)  )  < bloopsize/2)
-                {
-                    Color moo = cstex_1.GetPixel(this.g_size/2 + x, this.g_size/2 + y);
-                    moo.r = -1.0f;//finfx;
-                    moo.g = 0.0f;//finfy;
-                    moo.b = 0.0f;
-                    moo.a = 0.0f;
-                    cstex_1.SetPixel(this.g_size/2 + x, this.g_size/2 + y, moo);
-                }
+//                 if (Mathf.Sqrt( (fx*fx) + (fy*fy)  )  < bloopsize/2)
+//                 {
+//                     Color moo = cstex_1.GetPixel(this.g_size/2 + x, this.g_size/2 + y);
+//                     moo.r = -1.0f;//finfx;
+//                     moo.g = 0.0f;//finfy;
+//                     moo.b = 0.0f;
+//                     moo.a = 0.0f;
+//                     cstex_1.SetPixel(this.g_size/2 + x, this.g_size/2 + y, moo);
+//                 }
  
          
-            }
-        }
-        cstex_1.Apply();
-        Graphics.Blit(this.cstex_1, this._renderTextureOutput1);
-            }
+//             }
+//         }
+//             }
 
 
 
 
 
 
+        
+            Vector3 mousePos = this.mouse_go.transform.position;
 
 
             // find out where the object is on the fluid and exchange momentum between them.
 
-            if (Input.GetButtonDown("Fire1"))
+            if (Input.GetButton("Fire1"))
         {
-            Vector3 mousePos = Input.mousePosition;
-            
-              Color moo = cstex_1.GetPixel((int)mousePos.x, (int)mousePos.y);
 
-              Debug.Log(moo);
-               rb.AddForce(new Vector3(moo.r* -1000.0f, moo.g*-1000.0f, 0.0f));
+Vector3 mp = Input.mousePosition;
+
+
+this.mouse_go.transform.position = mp;
+
+
 
 
         }
+
+
+
+
+
+            
+            //   Color moo = cstex_1.GetPixel((int)mousePos.x, (int)mousePos.y);
+
+              Debug.Log(mousePos);
+            //    rb.AddForce(new Vector3(moo.r* -1000.0f, moo.g*-1000.0f, 0.0f));
+
+
+            const float mouse_k = 1.0f;
+              
+                 int bloopsize = 100;//this.mouse_go.transform.localScale;
+                float angle = this.mouse_go.transform.eulerAngles.z;
+
+                float ca = Mathf.Cos(angle);
+                float sa = Mathf.Sin(angle);
+
+ for(int y = 0; y < bloopsize; y++)
+        {
+            for(int x = -bloopsize; x < 0; x++)
+            {
+
+
+                int herex =  (int)(  ca*(x + (mousePos.x * mouse_k)) + sa*(y + (mousePos.y * mouse_k))                  );
+                int herey =  (int)(  ca*(y + (mousePos.y * mouse_k)) + sa*(x + (mousePos.x * mouse_k))                  );
+
+                if (herex >= 0 && herex < g_size && herey >= 0 && herey < g_size)
+                {
+
+ Color moo = cstex_1.GetPixel(herex, herey);
+                    moo.r = -1.0f;//finfx;
+                    moo.g = 0.0f;//finfy;
+                    moo.b = 0.0f;
+                    moo.a = 0.0f;
+                    cstex_1.SetPixel(herex, herey, moo);
+
+            }
+            }
+        }
+
+        // cstex_1.Apply();
+        // Graphics.Blit(this.cstex_1, this._renderTextureOutput1);
+
+
+        // }
+
+
+
+
+        cstex_1.Apply();
+        Graphics.Blit(this.cstex_1, this._renderTextureOutput1);
 
 
 

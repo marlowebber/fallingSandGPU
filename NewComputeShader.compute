@@ -22,6 +22,14 @@ void Particle (uint3 id : SV_DispatchThreadID)
 
 	*/
 
+	const int boundary = 5;
+	if (id.x < boundary || size-id.x < boundary || id.y < boundary || size-id.y < boundary)
+	{
+		particle_output[id.xy] = float4(0.0, 0.0, 0.5, 1.0);
+		return;
+	}
+
+
 
 	float4 here = particle_input[id.xy];
 	float4 result = here;
@@ -29,30 +37,17 @@ void Particle (uint3 id : SV_DispatchThreadID)
 	//backward advection
 	result = particle_input[id.xy - (here.xy * 3.0  )];
 	
-
 	float4 pbry = particle_input[id.xy + float2(0,1)];
 	float4 nbry = particle_input[id.xy + float2(0,-1)];
 	float4 nbrx = particle_input[id.xy + float2(-1,0)];
 	float4 pbrx = particle_input[id.xy + float2(1,0)];
 
-
 	float div = ((pbrx.x - nbrx.x) + (pbry.y - nbry.y)) * 0.5;
-
-
-
 	result.z = ( pbrx.z + pbry.z + nbrx.z + nbry.z - div ) * 0.25;
-
 	result.x -= (pbrx.z - nbrx.z) * 0.5;
 	result.y -= (pbry.z - nbry.z) * 0.5;
-
 	result.a = 1.0;
-
-
 	particle_output[id.xy] = result;
-
-
-
-
 
 	// forward advection	
 	//float2 vel = result.xy;
