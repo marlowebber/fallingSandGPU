@@ -60,6 +60,8 @@ public class deepseaunity3 : MonoBehaviour
     public bool prepared;
     public int g_size;
 
+    public const float fluid_scale = 10.0f;
+
     void ToTexture2D( RenderTexture rTex, Texture2D tex)
     {
         RenderTexture.active = rTex;
@@ -98,8 +100,8 @@ public class deepseaunity3 : MonoBehaviour
         this.bdg= new GameObject();
         this.bdg.transform.SetParent(this.canvas.transform);
 
-        this.bdg.transform.position = new Vector3 (   500.0f, 400.0f, 0.0f   ) ;  
-        this.bdg.transform.localScale = new Vector3(8.0f, 8.0f, 8.0f);
+        this.bdg.transform.position = new Vector3 (   this.g_size/2, this.g_size/2, 0.0f   ) ;  
+        this.bdg.transform.localScale = new Vector3(fluid_scale, fluid_scale, 1.0f);
 
         this.bdi = this.bdg.AddComponent<Image>();
 
@@ -170,7 +172,7 @@ public class deepseaunity3 : MonoBehaviour
         this.col = this.mouse_go.AddComponent<BoxCollider2D>();
         this.rb = this.mouse_go.AddComponent<Rigidbody2D>();
         this.rb.gravityScale = 0.0f;
-        this.rb.transform.position = new Vector3(200.0f, 200.0f, 0.0f);
+        this.rb.transform.position = new Vector3(this.g_size/2, this.g_size/2, 0.0f);
      
      
      
@@ -434,19 +436,27 @@ this.rb.AddForce( pdif );
             const float mouse_k = 1.0f;
               
                  int bloopsize = 100;//this.mouse_go.transform.localScale;
-                float angle = this.mouse_go.transform.eulerAngles.z;
+                float angle = ((this.mouse_go.transform.eulerAngles.z / 360.0f) - (0.5f)) * (2.0f * Mathf.PI);
 
                 float ca = Mathf.Cos(angle);
                 float sa = Mathf.Sin(angle);
 
- for(int y = 0; y < bloopsize; y++)
+                
+int hbloop = bloopsize/2;
+ for(int y = -hbloop; y < hbloop; y++)
         {
-            for(int x = -bloopsize; x < 0; x++)
+            for(int x = -hbloop; x < hbloop; x++)
             {
 
 
-                int herex =  (int)(  ca*(x + (mousePos.x * mouse_k)) + sa*(y + (mousePos.y * mouse_k))                  );
-                int herey =  (int)(  ca*(y + (mousePos.y * mouse_k)) + sa*(x + (mousePos.x * mouse_k))                  );
+                int herex =  (int)(      ca*(x) - sa*(y)         + (mousePos.x)         );
+                int herey =  (int)(      ca*(y) + sa*(x)         + (mousePos.y)         );
+
+
+
+
+
+
 
                 if (herex >= 0 && herex < g_size && herey >= 0 && herey < g_size)
                 {
@@ -455,6 +465,17 @@ this.rb.AddForce( pdif );
                     // moo.r = -1.0f;//finfx;
                     // moo.g = 0.0f;//finfy;
                     // moo.b = 0.0f;
+
+
+if (y == 0 || x == -1 || x == - bloopsize || y  == bloopsize-1 )
+{
+    const float k_reactive = -0.01f;
+
+                    this.rb.AddForceAtPosition(  new Vector2(moo.r*k_reactive, moo.g*k_reactive) ,    new Vector2(herex, herey) );
+}
+
+
+
                     moo.a = 0.0f;
                     cstex_1.SetPixel(herex, herey, moo);
 
