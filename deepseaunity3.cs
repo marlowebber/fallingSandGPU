@@ -27,6 +27,68 @@ public static string [] test_sub = new string []
 };
 
 
+
+
+
+public enum Materials
+{
+    Steel,
+}
+
+
+
+
+}
+
+
+
+public class Part
+{
+    public Content.Materials mat;
+    public float damage;
+
+}
+
+
+
+public class Vehicle
+{
+    public int size_x;
+    public int size_y;
+    
+
+    public GameObject go;
+    public Image img;
+    public Rigidbody2D rb;
+    public BoxCollider2D col;
+    public Texture2D tex_white_square;
+    public Sprite sprite_white_square;
+
+    public Vehicle(string [] blueprint, Vector2 position , deepseaunity3 world)
+    {
+
+        this.size_x = blueprint[0].Length;
+        this.size_y = blueprint.Length;
+
+        this.tex_white_square = new Texture2D(this.size_x, this.size_y);
+        this.sprite_white_square = Sprite.Create(tex_white_square, new Rect(0.0f, 0.0f, this.size_x, this.size_y), new Vector2(this.size_x/2, this.size_y/2), 1.0f);
+        this.go = new GameObject();
+        this.go.transform.SetParent(world.canvas.transform);
+        this.img = this.go.AddComponent<Image>();
+        this.img.sprite = this.sprite_white_square;
+        this.col = this.go.AddComponent<BoxCollider2D>();
+        this.rb = this.go.AddComponent<Rigidbody2D>();
+        this.rb.gravityScale = 0.0f;
+        this.rb.transform.position = new Vector3((world.g_size/2) + position.x, (world.g_size/2 )+ position.y, 0.0f);
+        this.rb.velocity = new Vector3(1.0f, 0.0f, 0.0f);
+
+
+        const float vscale = 100.0f;
+        this.go.transform.localScale = new Vector3(this.size_x/vscale, this.size_y/vscale, 1.0f);
+
+        Debug.Log("New ! of size " + this.size_x.ToString() + " " + this.size_y.ToString());
+    }
+
 }
 
 
@@ -40,6 +102,9 @@ public class deepseaunity3 : MonoBehaviour
     public RenderTexture _renderTextureOutput4;
 
 
+    public List<Vehicle> vehicles;
+
+
     public ComputeShader _computeShader;
     public Canvas canvas;
     public GameObject go;
@@ -48,13 +113,6 @@ public class deepseaunity3 : MonoBehaviour
     public GameObject bdg;
     public Texture2D cstex_1 ;
     public Texture2D cstex_2 ;
-    public Texture2D tex_white_square;
-    public Sprite sprite_white_square;
-
-    public GameObject mouse_go;
-    public Image mouse_indicator;
-    public Rigidbody2D rb;
-    public BoxCollider2D col;
 
     public bool prepared;
     public int g_size;
@@ -129,28 +187,37 @@ public class deepseaunity3 : MonoBehaviour
 
         _computeShader.SetFloat("_Resolution", _renderTextureOutput1.width);
     }
+
+
+
+    void setup_world()
+    {
+        for(int i = 0 ; i < 10; i++)
+        {
+
+            Vehicle s = new Vehicle( Content.test_sub, new Vector2(UnityEngine.Random.value * 10.0f, UnityEngine.Random.value * 10.0f), this );
+
+            this.vehicles.Add(s);
+
+
+        }
+    }
+
+
      
     // Start is called before the first frame update
     void Start()
     {
         this.prepared = false;
+
+        this.vehicles = new List<Vehicle>();
         this.g_size = 1024;
         this.go = new GameObject();
         this.canvas = this.go.AddComponent<Canvas>();
         this.canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         setup_gpu_stuff();
-        this.tex_white_square = new Texture2D(1, 1);
-        this.sprite_white_square = Sprite.Create(tex_white_square, new Rect(0.0f, 0.0f, this.tex_white_square.width, this.tex_white_square.height), new Vector2(this.tex_white_square.width/2, this.tex_white_square.height/2), 1.0f);
-     
-        this.mouse_go = new GameObject();
-        this.mouse_go.transform.SetParent(this.canvas.transform);
-        this.mouse_indicator = this.mouse_go.AddComponent<Image>();
-        this.mouse_indicator.sprite = this.sprite_white_square;
-        this.col = this.mouse_go.AddComponent<BoxCollider2D>();
-        this.rb = this.mouse_go.AddComponent<Rigidbody2D>();
-        this.rb.gravityScale = 0.0f;
-        this.rb.transform.position = new Vector3(this.g_size/2, this.g_size/2, 0.0f);
-        this.rb.velocity = new Vector3(1.0f, 0.0f, 0.0f);
+
+        this.setup_world();
      
         this.prepared = true;
 
@@ -193,52 +260,54 @@ public class deepseaunity3 : MonoBehaviour
         {
             const float k = 0.01f;
 
-            cstex_2.SetPixel(0, 0, new Color(this.rb.velocity.x * k, this.rb.velocity.y * k, 0.0f, 1.0f));
-            cstex_2.Apply();
-            Graphics.Blit( cstex_2, _renderTextureOutput4);
 
             _computeShader.Dispatch(divergence1_kernel, _renderTextureOutput1.width / (int) this.divergence1_xgroupsize, _renderTextureOutput1.height / (int) this.divergence1_ygroupsize,
                 1);
 
             ToTexture2D( this._renderTextureOutput2, this.cstex_1);
         
-            Vector3 mousePos = this.mouse_go.transform.position;
+            // Vector3 mousePos = this.mouse_go.transform.position;
 
-            if (Input.GetButton("Fire1"))
+
+
+
+
+            foreach(Vehicle v in this.vehicles)
             {
-                    Vector3 mp = Input.mousePosition;
-                    Vector3 pdif = mp - this.mouse_go.transform.position ; 
-                    this.rb.AddForce( pdif );
-            }
 
-            // Debug.Log(mousePos);
+                cstex_2.SetPixel(0, 0, new Color(v.rb.velocity.x * k, v.rb.velocity.y * k, 0.0f, 1.0f));
 
-            const float mouse_k = 1.0f;
+
+
+
+
+                const float mouse_k = 1.0f;
               
-            int bloopsize = 100;//this.mouse_go.transform.localScale;
-            float angle = ((this.mouse_go.transform.eulerAngles.z / 360.0f) - (0.5f)) * (2.0f * Mathf.PI);
+            // int bloopsize = 100;//this.mouse_go.transform.localScale;
+            float angle = ((v.go.transform.eulerAngles.z / 360.0f) - (0.5f)) * (2.0f * Mathf.PI);
 
             float ca = Mathf.Cos(angle);
             float sa = Mathf.Sin(angle);
                 
-            int hbloop = bloopsize/2;
-            for(int y = -hbloop; y < hbloop; y++)
+            int hx = v.size_x/2;
+            int hy = v.size_y/2;
+            for(int y = -hy; y < hy; y++)
             {
-                for(int x = -hbloop; x < hbloop; x++)
+                for(int x = -hx; x < hx; x++)
                 {
-                    int herex =  (int)(      ca*(x) - sa*(y)         + (mousePos.x)         );
-                    int herey =  (int)(      ca*(y) + sa*(x)         + (mousePos.y)         );
+                    int herex =  (int)(      ca*(x) - sa*(y)         + (v.go.transform.position.x)         );
+                    int herey =  (int)(      ca*(y) + sa*(x)         + (v.go.transform.position.y)         );
 
                     if (herex >= 0 && herex < g_size && herey >= 0 && herey < g_size)
                     {
 
                         Color moo = cstex_1.GetPixel(herex, herey);
-                        if (y == -hbloop || x == -hbloop || x == hbloop-1 || y  == hbloop-1 )
+                        if (y == -hy || x == -hx || x == hx-1 || y  == hy-1 )
                         {
                             const float k_reactive = 0.005f;
 
 
-                            Vector3 surface_v  = rb.GetPointVelocity(new Vector3(herex, herey, this.mouse_go.transform.position.z) );
+                            Vector3 surface_v  = v.rb.GetPointVelocity(new Vector3(herex, herey, v.go.transform.position.z) );
 
                             // surface_v = surface_v / 5.0f;
 
@@ -247,20 +316,39 @@ public class deepseaunity3 : MonoBehaviour
                             float compx = ((moo.r *f_to_surface_ratio)- surface_v.x) * k_reactive;
                             float compy = ((moo.g *f_to_surface_ratio)- surface_v.y) * k_reactive;
 
-                            this.rb.AddForceAtPosition( new Vector2(compx, compy),    new Vector2(herex, herey) );
+                            v.rb.AddForceAtPosition( new Vector2(compx, compy),    new Vector2(herex, herey) );
 
                             // moo.r += ((surface_v.x / f_to_surface_ratio )- moo.r) * k_reactive;
                             // moo.g += ((surface_v.y / f_to_surface_ratio )- moo.g) * k_reactive;
 
                             // Debug.Log( " moo: " + moo.r.ToString() + ", surface: " + surface_v.x.ToString());
                         }
+                        else
+                        {
+                            moo.a = 0.0f;
+                        }
 
-                        moo.a = 0.0f;
                         cstex_1.SetPixel(herex, herey, moo);
 
                     }
                 }
             }
+            }
+
+
+            cstex_2.Apply();
+            Graphics.Blit( cstex_2, _renderTextureOutput4);
+
+            // if (Input.GetButton("Fire1"))
+            // {
+            //         Vector3 mp = Input.mousePosition;
+            //         Vector3 pdif = mp - this.mouse_go.transform.position ; 
+            //         this.rb.AddForce( pdif );
+            // }
+
+            // Debug.Log(mousePos);
+
+ 
 
             cstex_1.Apply();
             Graphics.Blit(this.cstex_1, this._renderTextureOutput1);
