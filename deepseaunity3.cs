@@ -16,13 +16,13 @@ public static class Content
 
 public static string [] test_sub = new string [] 
 {
-    "                 =====          ",
-    "                 =   =          ",
-    "==================   ========== ",
-    "=                             ==",
-    "=                              =",
-    "=                             ==",
-    "=============================== ",
+    "    ===========================================             ",
+    " ======================================================     ",
+    "=========================================================== ",
+    "============================================================",
+    "=========================================================== ",
+    " ======================================================     ",
+    "    ===========================================             ",
 
 };
 
@@ -150,6 +150,7 @@ public class deepseaunity3 : MonoBehaviour
         this.rb = this.mouse_go.AddComponent<Rigidbody2D>();
         this.rb.gravityScale = 0.0f;
         this.rb.transform.position = new Vector3(this.g_size/2, this.g_size/2, 0.0f);
+        this.rb.velocity = new Vector3(1.0f, 0.0f, 0.0f);
      
         this.prepared = true;
 
@@ -210,7 +211,7 @@ public class deepseaunity3 : MonoBehaviour
                     this.rb.AddForce( pdif );
             }
 
-            Debug.Log(mousePos);
+            // Debug.Log(mousePos);
 
             const float mouse_k = 1.0f;
               
@@ -232,16 +233,26 @@ public class deepseaunity3 : MonoBehaviour
                     {
 
                         Color moo = cstex_1.GetPixel(herex, herey);
-                        if (y == 0 || x == -1 || x == - bloopsize || y  == bloopsize-1 )
+                        if (y == -hbloop || x == -hbloop || x == hbloop-1 || y  == hbloop-1 )
                         {
-                            const float k_reactive = 0.02f;
-                            float compx = moo.r*k_reactive;
-                            float compy = moo.g*k_reactive;
+                            const float k_reactive = 0.005f;
 
-                                            this.rb.AddForceAtPosition(  new Vector2(compx, compy) ,    new Vector2(herex, herey) );
 
-                                            moo.r -= compx;
-                                            moo.g -= compy;
+                            Vector3 surface_v  = rb.GetPointVelocity(new Vector3(herex, herey, this.mouse_go.transform.position.z) );
+
+                            // surface_v = surface_v / 5.0f;
+
+                            const float f_to_surface_ratio = 100.0f;
+
+                            float compx = ((moo.r *f_to_surface_ratio)- surface_v.x) * k_reactive;
+                            float compy = ((moo.g *f_to_surface_ratio)- surface_v.y) * k_reactive;
+
+                            this.rb.AddForceAtPosition( new Vector2(compx, compy),    new Vector2(herex, herey) );
+
+                            // moo.r += ((surface_v.x / f_to_surface_ratio )- moo.r) * k_reactive;
+                            // moo.g += ((surface_v.y / f_to_surface_ratio )- moo.g) * k_reactive;
+
+                            // Debug.Log( " moo: " + moo.r.ToString() + ", surface: " + surface_v.x.ToString());
                         }
 
                         moo.a = 0.0f;
@@ -257,3 +268,5 @@ public class deepseaunity3 : MonoBehaviour
         }
     }
 }
+
+
