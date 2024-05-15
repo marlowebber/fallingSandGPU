@@ -5,8 +5,6 @@ RWTexture2D<float4> particle_input;
 RWTexture2D<float4> particle_output	;
 RWTexture2D<float4> particle_display	;
 
-
-
 RWTexture2D<float4> rigidbody_information	;
 
 [numthreads(8,8,1)]
@@ -16,14 +14,10 @@ void Particle (uint3 id : SV_DispatchThreadID)
 	const int size = 1024;
 
 	/*
-
 	r = particle x
 	g = particle y
 	b = particle pressure
-
-
-
-
+	a = obstacle (0.0 = blocked, 1.0 = not blocked)
 	*/
 
 	const int boundary = 5;
@@ -33,17 +27,13 @@ void Particle (uint3 id : SV_DispatchThreadID)
 		return;
 	}
 
-
-
 	float4 here = particle_input[id.xy];
-
 	float4 result = here;
 	
 	//backward advection
-	result = particle_input[id.xy - (here.xy * 3.0  )];
+	result = particle_input[id.xy - (here.xy * 5.0  )];
 
-if (here.a == 0.0){result.x = rigidbody_information[float2(0,0)].r; result.y = rigidbody_information[float2(0,0)].g;}
-
+	if (here.a == 0.0){result.x = rigidbody_information[float2(0,0)].r; result.y = rigidbody_information[float2(0,0)].g;  }
 
 	
 	float4 pbry = particle_input[id.xy + float2(0,1)];
@@ -65,6 +55,7 @@ if (here.a == 0.0){result.x = rigidbody_information[float2(0,0)].r; result.y = r
 	result.z = ( pbrx.z + pbry.z + nbrx.z + nbry.z - div ) * 0.25;
 	result.x -= dpx * 0.5;
 	result.y -= dpy * 0.5;
+
 
 	result.a = 1.0;
 	particle_output[id.xy] = result;
