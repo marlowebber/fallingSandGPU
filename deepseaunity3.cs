@@ -108,36 +108,40 @@ public class Vehicle
 
     public void part_check_border(int i)
     {
-            this.parts[i].border = false;
-                if (this.parts[i].mat != Content.Materials.Air)
+        int x = i % this.size_x;
+        int y = i / this.size_x;
+
+        this.parts[i].border = false;
+        if (this.parts[i].mat != Content.Materials.Air)
+        {
+            for(int xx = -1; xx <= 1; xx++)
+            {
+                for(int yy = -1; yy <= 1; yy++)
                 {
-                    for(int xx = -1; xx <= 1; x++)
+                    if (xx!=0 && yy !=0)
                     {
-                        for(int yy = -1; y <= 1; y++)
+                        int nbr = ( (y+yy) * size_x  ) + (x + xx);
+                        if (nbr >= 0 && nbr < (size_x*size_y))
                         {
-                            if (xx!=0 && yy !=0)
+                            if (parts[nbr].mat == Content.Materials.Air)
                             {
-                                int nbr = ( (y+yy) * size_x  ) + (x + xx);
-                                if (nbr >= 0 && nbr < (size_x*size_y))
-                                {
-                                    if (parts[nbr].mat != Content.Materials.Air)
-                                    {
-                                        parts[i].border = true;
-                                    }
-                                }
+                                parts[i].border = true;
+                                return;
                             }
                         }
                     }
                 }
+            }
+        }
     }
 
  
 
     public void detect_borders()
     {
-        foreach (Part p in this.parts)
+        for (int i = 0; i < (this.size_x*this.size_y);i++)
         {
-            this.part_check_border(p);
+            this.part_check_border(i);
         }
     }
 
@@ -208,6 +212,7 @@ public class deepseaunity3 : MonoBehaviour
 
     public List<Vehicle> vehicles;
 
+    // public Camera main_cam;
 
     public ComputeShader _computeShader;
     public Canvas canvas;
@@ -222,6 +227,11 @@ public class deepseaunity3 : MonoBehaviour
     public int g_size;
 
     public const float fluid_scale = 10.0f;
+    const float f_to_surface_ratio = 100.0f;
+
+    public const int sqrt_max_vehicles = 10;
+
+    public float zoom = 300.0f;
 
     void ToTexture2D( RenderTexture rTex, Texture2D tex)
     {
@@ -258,13 +268,13 @@ public class deepseaunity3 : MonoBehaviour
         this.bdg = new GameObject();
         this.bdg.transform.SetParent(this.canvas.transform);
 
-        this.bdg.transform.position = new Vector3 (   this.g_size/2, this.g_size/2, 0.0f   ) ;  
+        // this.bdg.transform.position = new Vector3 (   this.g_size/2, this.g_size/2, 0.0f   ) ;  
         this.bdg.transform.localScale = new Vector3(fluid_scale, fluid_scale, 1.0f);
 
         this.bdi = this.bdg.AddComponent<Image>();
 
         this. cstex_1 = new Texture2D(this.g_size, this.g_size, TextureFormat.RGBAFloat, -1, false);
-        this. cstex_2 = new Texture2D(1, 1, TextureFormat.RGBAFloat, -1, false);
+        this. cstex_2 = new Texture2D(sqrt_max_vehicles, sqrt_max_vehicles, TextureFormat.RGBAFloat, -1, false);
 
         this.bds = Sprite.Create(this.cstex_1, new Rect(0.0f, 0.0f, this.g_size, this.g_size), new Vector2(this.g_size/2, this.g_size/2), 1.0f);
         this.bdi.sprite = this.bds;
@@ -314,11 +324,12 @@ public class deepseaunity3 : MonoBehaviour
     {
         this.prepared = false;
 
+        // this.main_cam = Camera.main;
         this.vehicles = new List<Vehicle>();
         this.g_size = 1024;
         this.go = new GameObject();
         this.canvas = this.go.AddComponent<Canvas>();
-        this.canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        // this.canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         setup_gpu_stuff();
 
         this.setup_world();
@@ -366,6 +377,8 @@ public class deepseaunity3 : MonoBehaviour
         {
             const float k = 0.01f;
 
+            this.zoom *= 1.0f + (Input.mouseScrollDelta.y * 0.1f);
+
 
             _computeShader.Dispatch(divergence1_kernel, _renderTextureOutput1.width / (int) this.divergence1_xgroupsize, _renderTextureOutput1.height / (int) this.divergence1_ygroupsize,
                 1);
@@ -375,13 +388,18 @@ public class deepseaunity3 : MonoBehaviour
             // Vector3 mousePos = this.mouse_go.transform.position;
 
 
+Camera.main.transform.position = this.vehicles[0].go.transform.position + new Vector3(0.0f, 0.0f, -10.0f);
+Camera.main.orthographicSize = this.zoom;
+this.bdg.transform.position = this.vehicles[0].go.transform.position ;
 
-
-
-            foreach(Vehicle v in this.vehicles)
+            for( int jj = 0; jj < this.vehicles.Count; jj++ )
             {
+                Vehicle v = this.vehicles[jj];  
 
-                cstex_2.SetPixel(0, 0, new Color(v.rb.velocity.x * k, v.rb.velocity.y * k, 0.0f, 1.0f));
+                // int jx = jj % sqrt_max_vehicles;
+                // int jy = jj / sqrt_max_vehicles;
+
+                // cstex_2.SetPixel(jx, jy, new Color(v.rb.velocity.x * k, v.rb.velocity.y * k, 0.0f, 1.0f));
 
 
 
@@ -411,8 +429,17 @@ public class deepseaunity3 : MonoBehaviour
 
                     int x = (i % v.size_x) - hx;
                     int y = (i / v.size_x) - hy;
-                    int herex =  (int)(      ca*(x) - sa*(y)         + (v.go.transform.position.x)       );
-                    int herey =  (int)(      ca*(y) + sa*(x)         + (v.go.transform.position.y)      );
+                    float fherex =  (      ca*(x) - sa*(y)         + (v.go.transform.position.x)       );
+                    float fherey =  (      ca*(y) + sa*(x)         + (v.go.transform.position.y)      );
+
+                    // if (i != 0)
+                    // {
+                        fherex +=    -bdg.transform.position.x + this.g_size/2; 
+                        fherey +=    -bdg.transform.position.y + this.g_size/2; 
+                    // }
+
+                    int herex = (int)fherex;
+                    int herey = (int)fherey;
 
                     if (herex >= 0 && herex < g_size && herey >= 0 && herey < g_size)
                     {
@@ -426,8 +453,6 @@ public class deepseaunity3 : MonoBehaviour
                             Vector3 surface_v  = v.rb.GetPointVelocity(new Vector3(herex, herey, v.go.transform.position.z) );
 
                             // surface_v = surface_v / 5.0f;
-
-                            const float f_to_surface_ratio = 100.0f;
 
                             float compx = ((moo.r *f_to_surface_ratio)- surface_v.x) * k_reactive;
                             float compy = ((moo.g *f_to_surface_ratio)- surface_v.y) * k_reactive;
@@ -455,8 +480,10 @@ public class deepseaunity3 : MonoBehaviour
                             v.rb.AddForceAtPosition( new Vector2(compx, compy),    new Vector2(herex, herey) );
 
 
-                            moo.r -= compx / f_to_surface_ratio;
-                            moo.g -= compy / f_to_surface_ratio;
+                            // moo.r -= compx / f_to_surface_ratio;
+                            // moo.g -= compy / f_to_surface_ratio;
+
+
                             // moo.r += ((surface_v.x / f_to_surface_ratio )- moo.r) * k_reactive;
                             // moo.g += ((surface_v.y / f_to_surface_ratio )- moo.g) * k_reactive;
 
@@ -481,6 +508,14 @@ public class deepseaunity3 : MonoBehaviour
             // }
             }
             // this.vehicles[0].go.transform.position = new Vector2(this.g_size/2, this.g_size/2);
+
+
+        _computeShader.SetFloat( "advx", 0.0f );
+        _computeShader.SetFloat( "advy", 0.0f );
+
+
+            // this.main_cam.transform.position = this.vehicles[0].go.transform.position + new Vector3(0.0f, 0.0f, this.zoom);
+
 
             cstex_2.Apply();
             Graphics.Blit( cstex_2, _renderTextureOutput4);

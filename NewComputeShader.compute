@@ -1,9 +1,9 @@
 
-float4 advect_lookup(RWTexture2D<float4> particle_input , float2 addr)
+float4 advect_lookup(RWTexture2D<float4> particle_input , float2 addr, float2 advr)
 {
 	const float k_advection = 5.0f;
 	float2 vel = particle_input[addr].xy * k_advection;
-	float2 advect_addr = addr - vel;
+	float2 advect_addr = (addr - vel) ;//- advr;
 	return particle_input[advect_addr];
 }
 
@@ -13,7 +13,10 @@ RWTexture2D<float4> particle_input;
 RWTexture2D<float4> particle_output	;
 RWTexture2D<float4> particle_display	;
 
-RWTexture2D<float4> rigidbody_information	;
+// RWTexture2D<float4> rigidbody_information	;
+
+float advx;
+float advy;
 
 [numthreads(8,8,1)]
 
@@ -38,15 +41,15 @@ void Particle (uint3 id : SV_DispatchThreadID)
 	float4 result = here;
 	
 	//backward advection
-	result = advect_lookup(particle_input, id.xy);
+	float2 advr = float2(advx, advy);
+	result = advect_lookup(particle_input, id.xy, advr);
 
-	if (here.a == 0.0){result.x = rigidbody_information[float2(0,0)].r; result.y = rigidbody_information[float2(0,0)].g;  }
+	if (here.a == 0.0){result.x = 0.0; result.y = 0.0;  }
 
-	
-	float4 pbry = advect_lookup( particle_input , id.xy + float2(0,1) );
-	float4 nbry = advect_lookup( particle_input , id.xy + float2(0,-1));
-	float4 nbrx = advect_lookup( particle_input , id.xy + float2(-1,0));
-	float4 pbrx = advect_lookup( particle_input , id.xy + float2(1,0) );
+	float4 pbry = advect_lookup( particle_input , id.xy + float2(0,1) , advr);
+	float4 nbry = advect_lookup( particle_input , id.xy + float2(0,-1), advr);
+	float4 nbrx = advect_lookup( particle_input , id.xy + float2(-1,0), advr);
+	float4 pbrx = advect_lookup( particle_input , id.xy + float2(1,0) , advr);
 
 	if (pbry.a == 0.0) {pbry = result;}
 	if (nbry.a == 0.0) {nbry = result;}
