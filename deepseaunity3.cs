@@ -16,13 +16,33 @@ public static class Content
 
 public static string [] test_sub = new string [] 
 {
-    "    ===========================================             ",
-    " ======================================================     ",
-    "=========================================================== ",
-    "============================================================",
-    "=========================================================== ",
-    " ======================================================     ",
-    "    ===========================================             ",
+
+    "         =         ",
+    "        ===        ",
+    "       =====       ",
+    "       =====       ",
+    "      =======      ",
+    "      =======      ",
+    "      =======      ",
+    "     =========     ",
+    "     =========     ",
+    "     =========     ",
+    "     =========     ",
+    "     =========     ",
+    "     =========     ",
+    "     =========     ",
+    "     =========     ",
+    "     =========     ",
+    "     =========     ",
+    "     =========     ",
+    "     =========     ",
+    "     =========     ",
+    "===================",
+    "===================",
+    "===================",
+    "===================",
+    "     PPPPPPPPP     ",
+    "     PPPPPPPPP     ",
 
 };
 
@@ -32,9 +52,17 @@ public static string [] test_sub = new string []
 
 public enum Materials
 {
+    Air,
     Steel,
-}
+    Propeller,
+};
 
+public static Dictionary<char,Materials> material_display = new Dictionary<char,Materials>()
+{
+  {' ', Materials.Air},
+  {'=', Materials.Steel},
+  {'P', Materials.Propeller},
+};
 
 
 
@@ -45,7 +73,13 @@ public enum Materials
 public class Part
 {
     public Content.Materials mat;
-    public float damage;
+    public bool border;
+
+    public Part(Content.Materials pmat)
+    {
+        this.mat = pmat;
+        this.border = false;
+    }
 
 }
 
@@ -61,8 +95,53 @@ public class Vehicle
     public Image img;
     public Rigidbody2D rb;
     public BoxCollider2D col;
-    public Texture2D tex_white_square;
-    public Sprite sprite_white_square;
+    public Texture2D tex;
+    public Sprite spr;
+
+
+    public float throttle;
+    public float steering_angle;
+
+    public Part [] parts;
+
+
+
+    public void part_check_border(int i)
+    {
+            this.parts[i].border = false;
+                if (this.parts[i].mat != Content.Materials.Air)
+                {
+                    for(int xx = -1; xx <= 1; x++)
+                    {
+                        for(int yy = -1; y <= 1; y++)
+                        {
+                            if (xx!=0 && yy !=0)
+                            {
+                                int nbr = ( (y+yy) * size_x  ) + (x + xx);
+                                if (nbr >= 0 && nbr < (size_x*size_y))
+                                {
+                                    if (parts[nbr].mat != Content.Materials.Air)
+                                    {
+                                        parts[i].border = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+    }
+
+ 
+
+    public void detect_borders()
+    {
+        foreach (Part p in this.parts)
+        {
+            this.part_check_border(p);
+        }
+    }
+
+
 
     public Vehicle(string [] blueprint, Vector2 position , deepseaunity3 world)
     {
@@ -70,27 +149,52 @@ public class Vehicle
         this.size_x = blueprint[0].Length;
         this.size_y = blueprint.Length;
 
-        this.tex_white_square = new Texture2D(this.size_x, this.size_y);
-        this.sprite_white_square = Sprite.Create(tex_white_square, new Rect(0.0f, 0.0f, this.size_x, this.size_y), new Vector2(this.size_x/2, this.size_y/2), 1.0f);
+        this.tex = new Texture2D(this.size_x, this.size_y);
+        this.spr = Sprite.Create(this.tex, new Rect(0.0f, 0.0f, this.size_x, this.size_y), new Vector2(this.size_x/2, this.size_y/2), 1.0f);
         this.go = new GameObject();
         this.go.transform.SetParent(world.canvas.transform);
         this.img = this.go.AddComponent<Image>();
-        this.img.sprite = this.sprite_white_square;
+        this.img.sprite = this.spr;
         this.col = this.go.AddComponent<BoxCollider2D>();
         this.rb = this.go.AddComponent<Rigidbody2D>();
         this.rb.gravityScale = 0.0f;
         this.rb.transform.position = new Vector3((world.g_size/2) + position.x, (world.g_size/2 )+ position.y, 0.0f);
         this.rb.velocity = new Vector3(1.0f, 0.0f, 0.0f);
 
+        this.parts = new Part [this.size_x * this.size_y];
+
+        int herey = 0;
+        foreach(string s in blueprint)
+        {
+            int herex = 0;
+            foreach(char c in s)
+            {
+                this.tex.SetPixel(herex, herey, new Color(0.0f,0.0f,0.0f,0.0f));
+
+                Content.Materials pmat = Content.material_display[c] ;
+                if ( pmat != Content.Materials.Air  )
+                {
+
+                    this.tex.SetPixel(herex, herey, new Color(1.0f,1.0f,1.0f,1.0f));
+                }
+                int i = (herey * this.size_x) + herex;
+                this.parts[i] = new Part(pmat);
+                herex++;
+            }
+            herey++;
+        }
+        this.tex.Apply();   
+
 
         const float vscale = 100.0f;
         this.go.transform.localScale = new Vector3(this.size_x/vscale, this.size_y/vscale, 1.0f);
+
+        this.detect_borders();
 
         Debug.Log("New ! of size " + this.size_x.ToString() + " " + this.size_y.ToString());
     }
 
 }
-
 
 
 
@@ -195,7 +299,7 @@ public class deepseaunity3 : MonoBehaviour
         for(int i = 0 ; i < 10; i++)
         {
 
-            Vehicle s = new Vehicle( Content.test_sub, new Vector2(UnityEngine.Random.value * 10.0f, UnityEngine.Random.value * 10.0f), this );
+            Vehicle s = new Vehicle( Content.test_sub, new Vector2(UnityEngine.Random.value * 100.0f, UnityEngine.Random.value * 100.0f), this );
 
             this.vehicles.Add(s);
 
@@ -219,7 +323,6 @@ public class deepseaunity3 : MonoBehaviour
 
         this.setup_world();
      
-        this.prepared = true;
 
         this.divergence1_kernel = _computeShader.FindKernel("Particle");
 
@@ -228,6 +331,9 @@ public class deepseaunity3 : MonoBehaviour
         _computeShader.SetTexture(divergence1_kernel, "particle_output",  _renderTextureOutput2);
         _computeShader.SetTexture(divergence1_kernel, "rigidbody_information",  _renderTextureOutput4);
         _computeShader.GetKernelThreadGroupSizes(divergence1_kernel,   out  divergence1_xgroupsize, out  divergence1_ygroupsize, out  divergence1_zgroupsize);
+
+
+        this.prepared = true;
     }
 
     int divergence1_kernel; 
@@ -284,25 +390,35 @@ public class deepseaunity3 : MonoBehaviour
                 const float mouse_k = 1.0f;
               
             // int bloopsize = 100;//this.mouse_go.transform.localScale;
-            float angle = ((v.go.transform.eulerAngles.z / 360.0f) - (0.5f)) * (2.0f * Mathf.PI);
+            float angle = ((v.go.transform.eulerAngles.z / 360.0f) - (0.5f)) * (2.0f * Mathf.PI) + Mathf.PI;
 
             float ca = Mathf.Cos(angle);
             float sa = Mathf.Sin(angle);
                 
             int hx = v.size_x/2;
             int hy = v.size_y/2;
-            for(int y = -hy; y < hy; y++)
+            // for(int y = -hy; y < hy; y++)
+            // {
+            //     for(int x = -hx; x < hx; x++)
+            //     {
+            int i = 0;
+            foreach (Part p in v.parts)
             {
-                for(int x = -hx; x < hx; x++)
-                {
-                    int herex =  (int)(      ca*(x) - sa*(y)         + (v.go.transform.position.x)         );
-                    int herey =  (int)(      ca*(y) + sa*(x)         + (v.go.transform.position.y)         );
+                // Debug.Log(p);
+            //         Part p = v.parts[  ((hy + y) * v.size_x) + (hx+x)  ]; 
+                    if (p.mat != Content.Materials.Air)
+                    {
+
+                    int x = (i % v.size_x) - hx;
+                    int y = (i / v.size_x) - hy;
+                    int herex =  (int)(      ca*(x) - sa*(y)         + (v.go.transform.position.x)       );
+                    int herey =  (int)(      ca*(y) + sa*(x)         + (v.go.transform.position.y)      );
 
                     if (herex >= 0 && herex < g_size && herey >= 0 && herey < g_size)
                     {
 
                         Color moo = cstex_1.GetPixel(herex, herey);
-                        if (y == -hy || x == -hx || x == hx-1 || y  == hy-1 )
+                        if (p.border)
                         {
                             const float k_reactive = 0.005f;
 
@@ -316,8 +432,31 @@ public class deepseaunity3 : MonoBehaviour
                             float compx = ((moo.r *f_to_surface_ratio)- surface_v.x) * k_reactive;
                             float compy = ((moo.g *f_to_surface_ratio)- surface_v.y) * k_reactive;
 
+
+
+                            if (p.mat == Content.Materials.Propeller)
+                            {
+
+                                if (Input.GetKey("w"))
+                                {
+                                    compx += ca;
+                                    compy += sa;
+                                }
+
+                            }
+
+
+
+
+
+
+
+
                             v.rb.AddForceAtPosition( new Vector2(compx, compy),    new Vector2(herex, herey) );
 
+
+                            moo.r -= compx / f_to_surface_ratio;
+                            moo.g -= compy / f_to_surface_ratio;
                             // moo.r += ((surface_v.x / f_to_surface_ratio )- moo.r) * k_reactive;
                             // moo.g += ((surface_v.y / f_to_surface_ratio )- moo.g) * k_reactive;
 
@@ -331,10 +470,17 @@ public class deepseaunity3 : MonoBehaviour
                         cstex_1.SetPixel(herex, herey, moo);
 
                     }
-                }
-            }
+                    }
+
+
+            i++;
             }
 
+
+            //     }
+            // }
+            }
+            // this.vehicles[0].go.transform.position = new Vector2(this.g_size/2, this.g_size/2);
 
             cstex_2.Apply();
             Graphics.Blit( cstex_2, _renderTextureOutput4);
