@@ -227,7 +227,7 @@ public class deepseaunity3 : MonoBehaviour
     public int g_size;
 
     public const float fluid_scale = 10.0f;
-    const float f_to_surface_ratio = 100.0f;
+    const float surface_to_fluid_ratio = 10000.0f;
 
     public const int sqrt_max_vehicles = 10;
 
@@ -309,7 +309,12 @@ public class deepseaunity3 : MonoBehaviour
         for(int i = 0 ; i < 10; i++)
         {
 
-            Vehicle s = new Vehicle( Content.test_sub, new Vector2(UnityEngine.Random.value * 100.0f, UnityEngine.Random.value * 100.0f), this );
+            Vehicle s = new Vehicle( Content.test_sub,  
+            new Vector2(
+                (UnityEngine.Random.value * 100.0f) - (g_size/2),
+                (UnityEngine.Random.value * 100.0f) - (g_size/2)
+            ),
+            this);
 
             this.vehicles.Add(s);
 
@@ -387,14 +392,23 @@ public class deepseaunity3 : MonoBehaviour
         
             // Vector3 mousePos = this.mouse_go.transform.position;
 
+            Debug.Log("spd " + vehicles[0].rb.velocity.x.ToString());
 
-Camera.main.transform.position = this.vehicles[0].go.transform.position + new Vector3(0.0f, 0.0f, -10.0f);
+
+
+Camera.main.transform.position = new Vector3(0.0f, 0.0f, -10.0f); //+ this.vehicles[0].go.transform.position ;
 Camera.main.orthographicSize = this.zoom;
-this.bdg.transform.position = this.vehicles[0].go.transform.position ;
+// this.bdg.transform.position = this.vehicles[0].go.transform.position ;
 
+
+                vehicles[0].go.transform.position = new Vector3(0.0f, 0.0f, 0.0f);
             for( int jj = 0; jj < this.vehicles.Count; jj++ )
             {
                 Vehicle v = this.vehicles[jj];  
+                if (jj != 0)
+                {
+                    v.go.transform.position -= new Vector3( vehicles[0].rb.velocity.x *Time.fixedDeltaTime, vehicles[0].rb.velocity.y* Time.fixedDeltaTime );
+                }
 
                 // int jx = jj % sqrt_max_vehicles;
                 // int jy = jj / sqrt_max_vehicles;
@@ -429,65 +443,77 @@ this.bdg.transform.position = this.vehicles[0].go.transform.position ;
 
                     int x = (i % v.size_x) - hx;
                     int y = (i / v.size_x) - hy;
-                    float fherex =  (      ca*(x) - sa*(y)         + (v.go.transform.position.x)       );
-                    float fherey =  (      ca*(y) + sa*(x)         + (v.go.transform.position.y)      );
+                    float fherex =  (      ca*(x) - sa*(y)         + (v.go.transform.position.x)    + this.g_size/2   );
+                    float fherey =  (      ca*(y) + sa*(x)         + (v.go.transform.position.y)    + this.g_size/2  );
 
                     // if (i != 0)
                     // {
-                        fherex +=    -bdg.transform.position.x + this.g_size/2; 
-                        fherey +=    -bdg.transform.position.y + this.g_size/2; 
                     // }
 
                     int herex = (int)fherex;
                     int herey = (int)fherey;
 
-                    if (herex >= 0 && herex < g_size && herey >= 0 && herey < g_size)
-                    {
 
-                        Color moo = cstex_1.GetPixel(herex, herey);
-                        if (p.border)
-                        {
-                            const float k_reactive = 0.005f;
-
-
-                            Vector3 surface_v  = v.rb.GetPointVelocity(new Vector3(herex, herey, v.go.transform.position.z) );
-
-                            // surface_v = surface_v / 5.0f;
-
-                            float compx = ((moo.r *f_to_surface_ratio)- surface_v.x) * k_reactive;
-                            float compy = ((moo.g *f_to_surface_ratio)- surface_v.y) * k_reactive;
-
+                    Vector2 force_applied_to_water = new Vector2(0.0f, 0.0f);
 
 
                             if (p.mat == Content.Materials.Propeller)
                             {
 
-                                if (Input.GetKey("w"))
+                                if (Input.GetKey("w") && jj == 0)
                                 {
-                                    compx += ca;
-                                    compy += sa;
+                                    const float prop_force = 1.0f;
+                                    float thrust_angle = angle - (0.5f * Mathf.PI);
+                                    Vector2 pf = new Vector2(Mathf.Cos(thrust_angle)*prop_force, Mathf.Sin(thrust_angle)*prop_force);
+                                    v.rb.AddForceAtPosition( pf,    new Vector2(herex, herey) );
+                                    force_applied_to_water -= pf;
                                 }
 
                             }
 
 
+                
+
+
+
+
+
+                    if (herex >= 0 && herex < g_size && herey >= 0 && herey < g_size)
+                    {
+
+                        Color moo = cstex_1.GetPixel(herex, herey);
+
+
+
+                            moo.r += force_applied_to_water.x * 10000.0f;
+                            moo.g += force_applied_to_water.y * 10000.0f;
+                            
+                        if (p.border)
+                        {
+                            // const float k_water_coupling = 0.1f;
+                            // Vector3 body_point_v3  = v.rb.GetPointVelocity(new Vector3(herex, herey, v.go.transform.position.z) );
+                            // Vector2 body_point_v = new Vector2(body_point_v3.x,  body_point_v3.y) / surface_to_fluid_ratio;
+                            // Vector2 water_v = new Vector2(moo.r , moo.g ) ;
+                            // float compx = ( water_v.x - body_point_v.x) * 0.5f * k_water_coupling;
+                            // float compy = ( water_v.y - body_point_v.y) * 0.5f * k_water_coupling;
+                            // v.rb.AddForceAtPosition( new Vector2(compx, compy),    new Vector2(herex, herey) );
 
 
 
 
 
 
-                            v.rb.AddForceAtPosition( new Vector2(compx, compy),    new Vector2(herex, herey) );
 
 
-                            // moo.r -= compx / f_to_surface_ratio;
-                            // moo.g -= compy / f_to_surface_ratio;
+
+
+
 
 
                             // moo.r += ((surface_v.x / f_to_surface_ratio )- moo.r) * k_reactive;
                             // moo.g += ((surface_v.y / f_to_surface_ratio )- moo.g) * k_reactive;
 
-                            // Debug.Log( " moo: " + moo.r.ToString() + ", surface: " + surface_v.x.ToString());
+                            // Debug.Log( " moo: " + moo.r.ToString() + ", body_point_v: " + body_point_v.x.ToString());
                         }
                         else
                         {
@@ -510,8 +536,8 @@ this.bdg.transform.position = this.vehicles[0].go.transform.position ;
             // this.vehicles[0].go.transform.position = new Vector2(this.g_size/2, this.g_size/2);
 
 
-        _computeShader.SetFloat( "advx", 0.0f );
-        _computeShader.SetFloat( "advy", 0.0f );
+        _computeShader.SetFloat( "advx", vehicles[0].rb.velocity.x * 0.1f );
+        _computeShader.SetFloat( "advy", vehicles[0].rb.velocity.y * 0.1f );
 
 
             // this.main_cam.transform.position = this.vehicles[0].go.transform.position + new Vector3(0.0f, 0.0f, this.zoom);

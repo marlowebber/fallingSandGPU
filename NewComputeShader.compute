@@ -1,9 +1,9 @@
 
-float4 advect_lookup(RWTexture2D<float4> particle_input , float2 addr, float2 advr)
+float4 advect_lookup(RWTexture2D<float4> particle_input , float2 addr)
 {
 	const float k_advection = 5.0f;
 	float2 vel = particle_input[addr].xy * k_advection;
-	float2 advect_addr = (addr - vel) ;//- advr;
+	float2 advect_addr = (addr - vel);
 	return particle_input[advect_addr];
 }
 
@@ -42,19 +42,19 @@ void Particle (uint3 id : SV_DispatchThreadID)
 	
 	//backward advection
 	float2 advr = float2(advx, advy);
-	result = advect_lookup(particle_input, id.xy, advr);
+	result = advect_lookup(particle_input, id.xy);
 
-	if (here.a == 0.0){result.x = 0.0; result.y = 0.0;  }
+	// if (here.a == 0.0){result.x = 0.0; result.y = 0.0;  }
 
-	float4 pbry = advect_lookup( particle_input , id.xy + float2(0,1) , advr);
-	float4 nbry = advect_lookup( particle_input , id.xy + float2(0,-1), advr);
-	float4 nbrx = advect_lookup( particle_input , id.xy + float2(-1,0), advr);
-	float4 pbrx = advect_lookup( particle_input , id.xy + float2(1,0) , advr);
+	float4 pbry = advect_lookup( particle_input , id.xy + float2(0,1) );
+	float4 nbry = advect_lookup( particle_input , id.xy + float2(0,-1));
+	float4 nbrx = advect_lookup( particle_input , id.xy + float2(-1,0));
+	float4 pbrx = advect_lookup( particle_input , id.xy + float2(1,0) );
 
-	if (pbry.a == 0.0) {pbry = result;}
-	if (nbry.a == 0.0) {nbry = result;}
-	if (pbrx.a == 0.0) {pbrx = result;}
-	if (nbrx.a == 0.0) {nbrx = result;}
+	// if (pbry.a == 0.0) {pbry = result;}
+	// if (nbry.a == 0.0) {nbry = result;}
+	// if (pbrx.a == 0.0) {pbrx = result;}
+	// if (nbrx.a == 0.0) {nbrx = result;}
 
 	float dvx = (pbrx.x - nbrx.x);
 	float dvy = (pbry.y - nbry.y);
@@ -66,11 +66,11 @@ void Particle (uint3 id : SV_DispatchThreadID)
 	result.x -= dpx * 0.5;
 	result.y -= dpy * 0.5;
 
-	result.x += (  0.5 - result.x) * 0.1;
+	// result.x += (  0.5 - result.x) * 0.1;
 
 
 	result.a = 1.0;
-	particle_output[id.xy] = result;
+	particle_output[id.xy - advr] = result;
 
 
 
