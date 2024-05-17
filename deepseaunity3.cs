@@ -392,7 +392,7 @@ public class deepseaunity3 : MonoBehaviour
         
             // Vector3 mousePos = this.mouse_go.transform.position;
 
-            Debug.Log("spd " + vehicles[0].rb.velocity.x.ToString());
+            // Debug.Log("spd " + vehicles[0].rb.velocity.x.ToString());
 
 
 
@@ -536,8 +536,8 @@ Camera.main.orthographicSize = this.zoom;
             // this.vehicles[0].go.transform.position = new Vector2(this.g_size/2, this.g_size/2);
 
 
-        _computeShader.SetFloat( "advx", vehicles[0].rb.velocity.x * 0.1f );
-        _computeShader.SetFloat( "advy", vehicles[0].rb.velocity.y * 0.1f );
+            _computeShader.SetFloat( "advx", vehicles[0].rb.velocity.x * 0.015f );
+            _computeShader.SetFloat( "advy", vehicles[0].rb.velocity.y * 0.015f );
 
 
             // this.main_cam.transform.position = this.vehicles[0].go.transform.position + new Vector3(0.0f, 0.0f, this.zoom);

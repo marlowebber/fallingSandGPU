@@ -30,12 +30,7 @@ void Particle (uint3 id : SV_DispatchThreadID)
 	a = obstacle (0.0 = blocked, 1.0 = not blocked)
 	*/
 
-	const int boundary = 5;
-	if (id.x < boundary || size-id.x < boundary || id.y < boundary || size-id.y < boundary)
-	{
-		particle_output[id.xy] = float4(0.0, 0.0, 0.5, 1.0);
-		return;
-	}
+	
 
 	float4 here = particle_input[id.xy];
 	float4 result = here;
@@ -69,11 +64,23 @@ void Particle (uint3 id : SV_DispatchThreadID)
 	// result.x += (  0.5 - result.x) * 0.1;
 
 
+
+
 	result.a = 1.0;
+	// particle_output[id.xy ] = 
+	// if (id.x - advx >  size-boundary ||       id.x - advx < boundary || id.x - advx < boundary             || id.y - advy > size-boundary )
+	// {
+	// 	particle_output[id.xy] = float4(0.0, 0.0, 0.5, 1.0);
+	// 	return;
+	// }
 	particle_output[id.xy - advr] = result;
 
 
-
+	const int boundary = 10;
+	if (id.x < boundary || size-id.x < boundary || id.y < boundary || size-id.y < boundary)
+	{
+		particle_output[id.xy] = float4(0.0, 0.0, 0.5, 1.0);
+	}
 
 
 
