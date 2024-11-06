@@ -1,30 +1,31 @@
-float4 advect_lookup(RWTexture2D<float4> particle_input , float2 addr)
+float2 advect_lookup(RWTexture2D<float4> particle_input , float2 addr)
 {
-	const float k_advection = 10.0f;
-	float2 vel = particle_input[addr].xy * k_advection;
-	float2 advect_addr = (addr - vel);
-	return particle_input[advect_addr];
-}
+	// float2 vel = (particle_input[addr].xy) * 10;
+	return  addr;//(addr - vel);
+} 
 
-void set_wbd(RWTexture2D<float4> particle_output	 , float2 id, float4 result)
+void set_wbd(RWTexture2D<float4> particle_output_a	 , float2 id, float4 resulta)
 {
-	const int size = 1024;
+	const int size = 512;
 	const int boundary = 4;
 	if (id.x < boundary || size-id.x < boundary || id.y < size/2 || size-id.y < boundary)
 	{
-		particle_output[id.xy] = float4(0.0, 0.0, 0.0, 0.0);
+		particle_output_a[id.xy] = float4(0.0, 0.0, 0.25, 0.25);
 	}
 	else
 	{
-		particle_output[id.xy ] = result;
+		particle_output_a[id.xy ] = resulta;
 	}
 
 }
 
 #pragma kernel Particle
 
-RWTexture2D<float4> particle_input;
-RWTexture2D<float4> particle_output	;
+RWTexture2D<float4> particle_input_a;
+
+RWTexture2D<float4> particle_output_a	;
+
+
 RWTexture2D<float4> particle_display	;
 
 float advx;
@@ -34,34 +35,52 @@ float advy;
 
 void Particle (uint3 id : SV_DispatchThreadID)
 {
-	const float k_interchange = 0.5;
-	const float k_div = 0.5;
-	const float k_z = 0.25;
+	// const float k_interchange = 0.25;
+	// const float k_div = 0.25;
+	// const float k_z = 0.25;
 
 	float2 nary = id.xy + float2(0,-1);
 	float2 pary = id.xy + float2(0,1) ;
 	float2 narx = id.xy + float2(-1,0);
 	float2 parx = id.xy + float2(1,0) ;
 
-	float4 result = advect_lookup(particle_input, id.xy);
-	float4 pbry = advect_lookup( particle_input , pary);
-	float4 nbry = advect_lookup( particle_input , nary);
-	float4 nbrx = advect_lookup( particle_input , narx);
-	float4 pbrx = advect_lookup( particle_input , parx);
+	// rule 1
+	float2 resultn = advect_lookup( particle_input_a, id.xy);
+	float2 pbryan = advect_lookup(  particle_input_a , pary);
+	float2 nbryan = advect_lookup(  particle_input_a , nary);
+	float2 nbrxan = advect_lookup(  particle_input_a , narx);
+	float2 pbrxan = advect_lookup(  particle_input_a , parx);
+
+	float4 resulta = particle_input_a[resultn];
+	float4 pbrya = particle_input_a[pbryan];
+	float4 nbrya = particle_input_a[nbryan];
+	float4 nbrxa = particle_input_a[nbrxan];
+	float4 pbrxa = particle_input_a[pbrxan];
+
+	float dvx = (nbrxa.x - pbrxa.x) ;
+	float dvy = (nbrya.y - pbrya.y);
+	float div = (dvx + dvy) * 0.25f;
+
+	// rule 2
+	resulta.z = ( pbrxa.z + pbrya.z + nbrxa.z + nbrya.z - div ) * 0.25f ;
+
+	// rule 3
+	resulta.x += (nbrxa.z - pbrxa.z) * 0.25f;
+	resulta.y += (nbrya.z - pbrya.z) * 0.25f;
+
+	// rule 4
+	resulta.z  += (dvx + dvy) * 0.25f;
+
+	// mass conservation
+	// resulta.w += (nbrxa.x*nbrxa.w-pbrxa.x*pbrxa.w+nbrya.y*nbrya.w-pbrya.y*pbrya.w) * 0.25f;
+    
 
 
-	float dvx = (pbrx.x - nbrx.x);
-	float dvy = (pbry.y - nbry.y);
-	float div = (dvx + dvy) * k_div;
+	set_wbd(particle_output_a, id.xy, resulta);
 
-	result.z = ( pbrx.z + pbry.z + nbrx.z + nbry.z - div ) * k_z;
-	result.x -= (pbrx.z - nbrx.z) * k_interchange;
-	result.y -= (pbry.z - nbry.z) * k_interchange;
-	result.z  += (dvx + dvy) * k_z;
-	result.w += (  (nbrx.x*nbrx.w) - (pbrx.x*pbrx.w) + (nbry.y*nbry.w) - (pbry.y*pbry.w)) * k_z;
+	float vacttv = (abs(resulta.r-0.5) + abs(resulta.g-0.5) + resulta.b) * 0.1;
 
-
-	set_wbd(particle_output, id.xy, result);
+	particle_display[id.xy] = float4(vacttv,vacttv,vacttv,1.0f);
 	
 
 }		

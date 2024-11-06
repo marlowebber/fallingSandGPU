@@ -47,7 +47,7 @@ public static class Content
             "waving",
             new string [][]
             {
-               
+
                 new string []
                 {
                     "      ",
@@ -109,8 +109,7 @@ public class Dude
     public Texture2D tex;
     public Sprite spr;
 
-
-    public Dude(Vector2 position , deepseaunity3 world)
+    public Dude(Vector2 npos , deepseaunity3 world)
     {
         this.tex = new Texture2D(6, 6);
         this.spr = Sprite.Create(this.tex, new Rect(0.0f, 0.0f, 6, 6), new Vector2(3, 3), 1.0f);
@@ -119,7 +118,7 @@ public class Dude
         this.img = this.go.AddComponent<Image>();
         this.img.sprite = this.spr;
         this.parts = new Dictionary<Content.BodyParts, bool>();
-
+        this.position = npos;
         this.pose = "waving";
         this.pose_phase = 0;
         this.pose_frames = 0;
@@ -141,7 +140,7 @@ public class Dude
             }
             herey++;
         }
-        
+
         this.tex.Apply();   
         this.tex.filterMode = FilterMode.Point;
         const float vscale = 100.0f;
@@ -150,10 +149,11 @@ public class Dude
 }
 public class deepseaunity3 : MonoBehaviour
 {
-    public RenderTexture _renderTextureOutput1;
-    public RenderTexture _renderTextureOutput2;
-    public RenderTexture _renderTextureOutput3;
-    public RenderTexture _renderTextureOutput4;
+    public RenderTexture _renderTextureOutputA;
+
+    public RenderTexture _renderTextureInputA;
+
+    public RenderTexture _renderTextureDisplay;
     public List<Dude> vehicles;
     public ComputeShader _computeShader;
     public Canvas canvas;
@@ -163,12 +163,10 @@ public class deepseaunity3 : MonoBehaviour
     public GameObject bdg;
     public Texture2D cstex_1 ;
     public Texture2D cstex_2 ;
+
     public bool prepared;
     public int g_size;
-    public const float fluid_scale = 10.0f;
-    const float surface_to_fluid_ratio = 10000.0f;
-    public const int sqrt_max_vehicles = 10;
-    public float zoom;// = 10.0f;
+    public float zoom;
     void ToTexture2D( RenderTexture rTex, Texture2D tex)
     {
         RenderTexture.active = rTex;
@@ -177,44 +175,43 @@ public class deepseaunity3 : MonoBehaviour
     }
     void setup_gpu_stuff()
     {
-        _renderTextureOutput1 = new RenderTexture(this.g_size, this.g_size, 24, RenderTextureFormat.ARGBFloat);
-        _renderTextureOutput1.filterMode = FilterMode.Point;
-        _renderTextureOutput1.enableRandomWrite = true;
-        _renderTextureOutput1.Create();
-        _renderTextureOutput2 = new RenderTexture(this.g_size, this.g_size, 24, RenderTextureFormat.ARGBFloat);
-        _renderTextureOutput2.filterMode = FilterMode.Point;
-        _renderTextureOutput2.enableRandomWrite = true;
-        _renderTextureOutput2.Create();
-        _renderTextureOutput3 = new RenderTexture(this.g_size, this.g_size, 24, RenderTextureFormat.ARGBFloat);
-        _renderTextureOutput3.filterMode = FilterMode.Point;
-        _renderTextureOutput3.enableRandomWrite = true;
-        _renderTextureOutput3.Create();
-        _renderTextureOutput4 = new RenderTexture(1, 1, 24, RenderTextureFormat.ARGBFloat);
-        _renderTextureOutput4.filterMode = FilterMode.Point;
-        _renderTextureOutput4.enableRandomWrite = true;
-        _renderTextureOutput4.Create();
+        _renderTextureInputA = new RenderTexture(this.g_size, this.g_size, 24, RenderTextureFormat.ARGBFloat);
+        _renderTextureInputA.filterMode = FilterMode.Point;
+        _renderTextureInputA.enableRandomWrite = true;
+        _renderTextureInputA.Create();
+
+        _renderTextureOutputA = new RenderTexture(this.g_size, this.g_size, 24, RenderTextureFormat.ARGBFloat);
+        _renderTextureOutputA.filterMode = FilterMode.Point;
+        _renderTextureOutputA.enableRandomWrite = true;
+        _renderTextureOutputA.Create();
+
+        _renderTextureDisplay = new RenderTexture(this.g_size, this.g_size, 24, RenderTextureFormat.ARGBFloat);
+        _renderTextureDisplay.filterMode = FilterMode.Point;
+        _renderTextureDisplay.enableRandomWrite = true;
+        _renderTextureDisplay.Create();
+
         this.bdg = new GameObject();
         this.bdg.transform.SetParent(this.canvas.transform);
-        this.bdg.transform.localScale = new Vector3(fluid_scale, fluid_scale, 1.0f);
         this.bdi = this.bdg.AddComponent<Image>();
         this. cstex_1 = new Texture2D(this.g_size, this.g_size, TextureFormat.RGBAFloat, -1, false);
-        this. cstex_2 = new Texture2D(sqrt_max_vehicles, sqrt_max_vehicles, TextureFormat.RGBAFloat, -1, false);
-        this.bds = Sprite.Create(this.cstex_1, new Rect(0.0f, 0.0f, this.g_size, this.g_size), new Vector2(this.g_size/2, this.g_size/2), 1.0f);
+        this. cstex_2= new Texture2D(this.g_size, this.g_size, TextureFormat.RGBAFloat, -1, false);
+
+        this.bds = Sprite.Create(this.cstex_2, new Rect(0.0f, 0.0f, this.g_size, this.g_size), new Vector2(this.g_size/2, this.g_size/2), 1.0f);
         this.bdi.sprite = this.bds;
         for(int y = 0; y < this.g_size; y++)
         {
             for(int x = 0; x < this.g_size; x++)
             {
-                int addr_here = (y * this.g_size) + x;
-                // float bval = 0.5f;
-                cstex_1.SetPixel(x, y, new Color( (UnityEngine.Random.value - 0.5f ) , (UnityEngine.Random.value - 0.5f ), 0.5f, 0.1f));         
+                cstex_1.SetPixel(x, y, new Color( 0.0f,  0.0f, 0.25f, 0.25f));   
+
             }
         }
         cstex_1.Apply();
-        Graphics.Blit( cstex_1, _renderTextureOutput1);
-        Graphics.Blit( cstex_1, _renderTextureOutput2);
-        Graphics.Blit( cstex_1, _renderTextureOutput3);
-        _computeShader.SetFloat("_Resolution", _renderTextureOutput1.width);
+        Graphics.Blit( cstex_1, _renderTextureInputA);
+
+        Graphics.Blit( cstex_1, _renderTextureOutputA);
+
+        _computeShader.SetFloat("_Resolution", _renderTextureOutputA.width);
     }
     void setup_world()
     {
@@ -242,53 +239,39 @@ public class deepseaunity3 : MonoBehaviour
             vehicles[0].position.x += 1.0f;
         }
 
-
             Vector3 mousePos = Input.mousePosition;
-            //
-
-          if (Input.GetMouseButton(0))
-          {
-
+            if (Input.GetMouseButton(0))
+            {
                 for(int yy = 0 ; yy < 10; yy++)
                 { 
-
-                    
                     for(int xx = 0 ; xx < 10; xx++)
-                {
+                    {
+                        int herex = (int) mousePos.x + xx;
+                        int herey = (int) mousePos.y + yy;
+                        Color moo = cstex_1.GetPixel( herex , herey );
 
-                            int herex = (int) mousePos.x + xx;// (v.position.x + p % 6);
-                            int herey = (int) mousePos.y + yy;//( v.position.y + p / 6) ;
-                            Color moo = cstex_1.GetPixel( herex , herey );
-                            // const float k_water_coupling = 0.5f;
-                            // Vector2 water_v = new Vector2(moo.r , moo.g ) ;
-                            // Vector2 adjust = -water_v * k_water_coupling;
-                            // moo.r -= adjust.x;
-                            // moo.g -= adjust.y;
-                            moo.r += 0.1f;
-                            moo.g += 0.1f;
-                            moo.b += 0.1f;
-                            moo.a += 0.1f;
-                            cstex_1.SetPixel(herex, herey, moo);
-                }
-                }
+                        moo.b += 1.0f;
 
-          }
+                        cstex_1.SetPixel(herex, herey, moo);
+                    }
+                }
+            }
 
         if (Input.GetMouseButtonDown(1))
         {
-            // Debug.Log("Pressed right-click.");
+
         }
 
         if (Input.GetMouseButtonDown(2))
         {
-            // Debug.Log("Pressed middle-click.");
+
         }
     }
     void Start()
     {
         this.prepared = false;
         this.vehicles = new List<Dude>();
-        this.g_size = 1024;
+        this.g_size = 512;
         this.zoom = 10.0f;
         this.go = new GameObject();
         this.canvas = this.go.AddComponent<Canvas>();
@@ -296,9 +279,13 @@ public class deepseaunity3 : MonoBehaviour
         this.setup_world();
         this.divergence1_kernel = _computeShader.FindKernel("Particle");
         _computeShader.SetFloat( "particle_rand",  (UnityEngine.Random.value - 0.5f) * 2.0f);
-        _computeShader.SetTexture(divergence1_kernel, "particle_input",  _renderTextureOutput1);
-        _computeShader.SetTexture(divergence1_kernel, "particle_output",  _renderTextureOutput2);
-        _computeShader.SetTexture(divergence1_kernel, "rigidbody_information",  _renderTextureOutput4);
+
+        _computeShader.SetTexture(divergence1_kernel, "particle_input_a",   _renderTextureInputA);
+
+        _computeShader.SetTexture(divergence1_kernel, "particle_output_a",   _renderTextureOutputA);
+
+        _computeShader.SetTexture(divergence1_kernel, "particle_display",  _renderTextureDisplay);
+
         _computeShader.GetKernelThreadGroupSizes(divergence1_kernel,   out  divergence1_xgroupsize, out  divergence1_ygroupsize, out  divergence1_zgroupsize);
         this.prepared = true;
     }
@@ -326,9 +313,11 @@ public class deepseaunity3 : MonoBehaviour
         {
             const float k = 0.01f;
             this.zoom *= 1.0f + (Input.mouseScrollDelta.y * 0.1f);
-            _computeShader.Dispatch(divergence1_kernel, _renderTextureOutput1.width / (int) this.divergence1_xgroupsize, _renderTextureOutput1.height / (int) this.divergence1_ygroupsize,
+            _computeShader.Dispatch(divergence1_kernel, _renderTextureOutputA.width / (int) this.divergence1_xgroupsize, _renderTextureOutputA.height / (int) this.divergence1_ygroupsize,
                 1);
-            ToTexture2D( this._renderTextureOutput2, this.cstex_1);
+            ToTexture2D( this._renderTextureOutputA, this.cstex_1);
+            ToTexture2D( this._renderTextureDisplay, this.cstex_2);
+
             Camera.main.transform.position = new Vector3(0.0f, 0.0f, -this.zoom); 
             Camera.main.orthographicSize = this.zoom;
 
@@ -362,7 +351,6 @@ public class deepseaunity3 : MonoBehaviour
                 {
                     v.pose_frames = 0;
                     v.pose_phase++;
-                    //;//v.pose_phase = v.pose_phase % Content.poses[v.pose].Length;
                     if (v.pose_phase >= Content.poses[v.pose].Length)
                     {
                         v.pose_phase = 0;
@@ -372,10 +360,10 @@ public class deepseaunity3 : MonoBehaviour
             }
             _computeShader.SetFloat( "advx",  0.0f );
             _computeShader.SetFloat( "advy",  0.0f );
-            cstex_2.Apply();
-            Graphics.Blit( cstex_2, _renderTextureOutput4);
             cstex_1.Apply();
-            Graphics.Blit(this.cstex_1, this._renderTextureOutput1);
+
+            Graphics.Blit( cstex_1, _renderTextureInputA);
+
         }
     }
 }
