@@ -1,7 +1,6 @@
-
 float4 advect_lookup(RWTexture2D<float4> particle_input , float2 addr)
 {
-	const float k_advection = 5.0f;
+	const float k_advection = 10.0f;
 	float2 vel = particle_input[addr].xy * k_advection;
 	float2 advect_addr = (addr - vel);
 	return particle_input[advect_addr];
@@ -13,8 +12,6 @@ RWTexture2D<float4> particle_input;
 RWTexture2D<float4> particle_output	;
 RWTexture2D<float4> particle_display	;
 
-// RWTexture2D<float4> rigidbody_information	;
-
 float advx;
 float advy;
 
@@ -23,65 +20,38 @@ float advy;
 void Particle (uint3 id : SV_DispatchThreadID)
 {
 	const int size = 1024;
-	/*
-	r = particle x
-	g = particle y
-	b = particle pressure
-	a = obstacle (0.0 = blocked, 1.0 = not blocked)
-	*/
-
-	
 
 	float4 here = particle_input[id.xy];
 	float4 result = here;
-	
-	//backward advection
+
 	float2 advr = float2(advx, advy);
 	result = advect_lookup(particle_input, id.xy);
-
-	// if (here.a == 0.0){result.x = 0.0; result.y = 0.0;  }
 
 	float4 pbry = advect_lookup( particle_input , id.xy + float2(0,1) );
 	float4 nbry = advect_lookup( particle_input , id.xy + float2(0,-1));
 	float4 nbrx = advect_lookup( particle_input , id.xy + float2(-1,0));
 	float4 pbrx = advect_lookup( particle_input , id.xy + float2(1,0) );
 
-	// if (pbry.a == 0.0) {pbry = result;}
-	// if (nbry.a == 0.0) {nbry = result;}
-	// if (pbrx.a == 0.0) {pbrx = result;}
-	// if (nbrx.a == 0.0) {nbrx = result;}
+	const float k_interchange = 0.5;
+	const float k_div = 0.5;
+	const float k_z = 0.25;
 
 	float dvx = (pbrx.x - nbrx.x);
 	float dvy = (pbry.y - nbry.y);
 	float dpx = (pbrx.z - nbrx.z);
 	float dpy = (pbry.z - nbry.z);
-	float div = (dvx + dvy) * 0.5;
+	float div = (dvx + dvy) * k_div;
 
-	result.z = ( pbrx.z + pbry.z + nbrx.z + nbry.z - div ) * 0.25;
-	result.x -= dpx * 0.5;
-	result.y -= dpy * 0.5;
+	result.z = ( pbrx.z + pbry.z + nbrx.z + nbry.z - div ) * k_z;
+	result.x -= dpx * k_interchange;
+	result.y -= dpy * k_interchange;
 
-	// result.x += (  0.5 - result.x) * 0.1;
-
-
-
-
-	result.a = 1.0;
-	// particle_output[id.xy ] = 
-	// if (id.x - advx >  size-boundary ||       id.x - advx < boundary || id.x - advx < boundary             || id.y - advy > size-boundary )
-	// {
-	// 	particle_output[id.xy] = float4(0.0, 0.0, 0.5, 1.0);
-	// 	return;
-	// }
 	particle_output[id.xy - advr] = result;
 
-
-	const int boundary = 10;
+	const int boundary = 12;
 	if (id.x < boundary || size-id.x < boundary || id.y < boundary || size-id.y < boundary)
 	{
-		particle_output[id.xy] = float4(0.0, 0.0, 0.5, 1.0);
+		particle_output[id.xy] = float4(0.0, 0.0, 0.0, 1.0);
 	}
 
-
-
-}
+}	
