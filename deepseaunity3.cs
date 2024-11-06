@@ -206,8 +206,8 @@ public class deepseaunity3 : MonoBehaviour
             for(int x = 0; x < this.g_size; x++)
             {
                 int addr_here = (y * this.g_size) + x;
-                float bval = 0.5f;
-                cstex_1.SetPixel(x, y, new Color( (UnityEngine.Random.value-0.5f) * 0.1f, (UnityEngine.Random.value-0.5f) * 0.1f, bval, 1.0f));         
+                // float bval = 0.5f;
+                cstex_1.SetPixel(x, y, new Color( (UnityEngine.Random.value - 0.5f ) , (UnityEngine.Random.value - 0.5f ), 0.5f, 0.1f));         
             }
         }
         cstex_1.Apply();
@@ -248,12 +248,7 @@ public class deepseaunity3 : MonoBehaviour
 
           if (Input.GetMouseButton(0))
           {
-//             Debug.Log("Pressed left-click.");
-// //  {
-//                 Debug.Log(mousePos.x);
-//                 Debug.Log(mousePos.y);
-//             // }
-                 
+
                 for(int yy = 0 ; yy < 10; yy++)
                 { 
 
@@ -271,6 +266,8 @@ public class deepseaunity3 : MonoBehaviour
                             // moo.g -= adjust.y;
                             moo.r += 0.1f;
                             moo.g += 0.1f;
+                            moo.b += 0.1f;
+                            moo.a += 0.1f;
                             cstex_1.SetPixel(herex, herey, moo);
                 }
                 }

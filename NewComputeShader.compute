@@ -6,6 +6,21 @@ float4 advect_lookup(RWTexture2D<float4> particle_input , float2 addr)
 	return particle_input[advect_addr];
 }
 
+void set_wbd(RWTexture2D<float4> particle_output	 , float2 id, float4 result)
+{
+	const int size = 1024;
+	const int boundary = 4;
+	if (id.x < boundary || size-id.x < boundary || id.y < size/2 || size-id.y < boundary)
+	{
+		particle_output[id.xy] = float4(0.0, 0.0, 0.0, 0.0);
+	}
+	else
+	{
+		particle_output[id.xy ] = result;
+	}
+
+}
+
 #pragma kernel Particle
 
 RWTexture2D<float4> particle_input;
@@ -19,39 +34,34 @@ float advy;
 
 void Particle (uint3 id : SV_DispatchThreadID)
 {
-	const int size = 1024;
-
-	float4 here = particle_input[id.xy];
-	float4 result = here;
-
-	float2 advr = float2(advx, advy);
-	result = advect_lookup(particle_input, id.xy);
-
-	float4 pbry = advect_lookup( particle_input , id.xy + float2(0,1) );
-	float4 nbry = advect_lookup( particle_input , id.xy + float2(0,-1));
-	float4 nbrx = advect_lookup( particle_input , id.xy + float2(-1,0));
-	float4 pbrx = advect_lookup( particle_input , id.xy + float2(1,0) );
-
 	const float k_interchange = 0.5;
 	const float k_div = 0.5;
 	const float k_z = 0.25;
 
+	float2 nary = id.xy + float2(0,-1);
+	float2 pary = id.xy + float2(0,1) ;
+	float2 narx = id.xy + float2(-1,0);
+	float2 parx = id.xy + float2(1,0) ;
+
+	float4 result = advect_lookup(particle_input, id.xy);
+	float4 pbry = advect_lookup( particle_input , pary);
+	float4 nbry = advect_lookup( particle_input , nary);
+	float4 nbrx = advect_lookup( particle_input , narx);
+	float4 pbrx = advect_lookup( particle_input , parx);
+
+
 	float dvx = (pbrx.x - nbrx.x);
 	float dvy = (pbry.y - nbry.y);
-	float dpx = (pbrx.z - nbrx.z);
-	float dpy = (pbry.z - nbry.z);
 	float div = (dvx + dvy) * k_div;
 
 	result.z = ( pbrx.z + pbry.z + nbrx.z + nbry.z - div ) * k_z;
-	result.x -= dpx * k_interchange;
-	result.y -= dpy * k_interchange;
+	result.x -= (pbrx.z - nbrx.z) * k_interchange;
+	result.y -= (pbry.z - nbry.z) * k_interchange;
+	result.z  += (dvx + dvy) * k_z;
+	result.w += (  (nbrx.x*nbrx.w) - (pbrx.x*pbrx.w) + (nbry.y*nbry.w) - (pbry.y*pbry.w)) * k_z;
 
-	particle_output[id.xy - advr] = result;
 
-	const int boundary = 12;
-	if (id.x < boundary || size-id.x < boundary || id.y < boundary || size-id.y < boundary)
-	{
-		particle_output[id.xy] = float4(0.0, 0.0, 0.0, 1.0);
-	}
+	set_wbd(particle_output, id.xy, result);
+	
 
-}	
+}		
